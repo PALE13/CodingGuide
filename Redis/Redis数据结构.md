@@ -6,7 +6,7 @@
 
 注意，**Redis 数据结构并不是指 String（字符串）对象、List（列表）对象、Hash（哈希）对象、Set（集合）对象和 Zset（有序集合）对象，因为这些是 Redis 键值对中值的数据类型，也就是数据的保存形式，这些对象的底层实现的方式就用到了数据结构**。
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240316232644858.png" alt="image-20240316232644858" style="zoom: 67%;" />
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240316232644858.png" alt="image-20240316232644858" style="zoom: 50%;" />
 
 可以看到，Redis 数据类型的底层数据结构随着版本的更新也有所不同，比如：
 

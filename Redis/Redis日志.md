@@ -26,7 +26,7 @@ AOF 日志文件其实就是普通的文本，我们可以通过 `cat` 命令查
 
 我这里以「*set name xiaolin*」命令作为例子，Redis 执行了这条命令后，记录在 AOF 日志里的内容如下图：
 
-![img](https://cdn.xiaolincoding.com//mysql/other/337021a153944fd0f964ca834e34d0f2.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/337021a153944fd0f964ca834e34d0f2.png" alt="img" style="zoom:50%;" />
 
 我这里给大家解释下。
 
@@ -209,7 +209,7 @@ AOF 重写机制是在重写时，读取当前数据库中的所有键值对，�
 
 
 
-### RDB 快照
+### **RDB 快照**
 
 #### **快照怎么用？**
 

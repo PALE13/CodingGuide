@@ -213,10 +213,6 @@ redis-cli -h 192.168.1.11 –p 6379 cluster addslots 2,3
 
 
 
-
-
-
-
 ### **Redis主从节点时长连接还是短连接？**
 
 长连接
