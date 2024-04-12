@@ -12,7 +12,7 @@
 
 String 是最基本的 key-value 结构，key 是唯一标识，value 是具体的值，value其实不仅是字符串， 也可以是数字（整数或浮点数），value 最多可以容纳的数据长度是 `512M`。
 
-![image-20240316162331424](https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240316162331424.png)
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240316162331424.png" alt="image-20240316162331424" style="zoom:50%;" />
 
 **内部实现**
 
@@ -28,11 +28,11 @@ SDS 和我们认识的 C 字符串不太一样，之所以没有使用 C 语言�
 
 字符串对象的内部编码（encoding）有 3 种 ：**int、raw和 embstr**。
 
-<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/string%E7%BB%93%E6%9E%84.png" alt="img" style="zoom: 50%;" />
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/string%E7%BB%93%E6%9E%84.png" alt="img" style="zoom: 33%;" />
 
 如果一个字符串对象保存的是整数值，并且这个整数值可以用`long`类型来表示，那么字符串对象会将整数值保存在字符串对象结构的`ptr`属性里面（将`void*`转换成 long），并将字符串对象的编码设置为`int`。
 
-<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/int.png" alt="img" style="zoom:50%;" />
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/int.png" alt="img" style="zoom: 33%;" />
 
 如果字符串对象保存的是一个字符串，**并且这个字符申的长度小于等于 32 字节**（redis 2.+版本），那么字符串对象将使用一个简单动态字符串（SDS）来保存这个字符串，并将对象的编码设置为`embstr`， `embstr`编码是专门用于保存短字符串的一种优化编码方式：
 
@@ -56,7 +56,7 @@ SDS 和我们认识的 C 字符串不太一样，之所以没有使用 C 语言�
 
 但是 embstr 也有缺点的：
 
-- 如果字符串的长度增加需要重新分配内存时，整个redisObject和sds都需要重新分配空间，所以**embstr编码的字符串对象实际上是只读的**，redis没有为embstr编码的字符串对象编写任何相应的修改程序。当我们对embstr编码的字符串对象执行任何修改命令（例如append）时，程序会先将对象的编码从embstr转换成raw，然后再执行修改命令。
+- 如果字符串的长度增加需要重新分配内存时，整个redisObject和sds都需要重新分配空间，所以**embstr编码的字符串对象实际上是只读的**，redis没有为embstr编码的字符串对象编写任何相应的修改程序。当我们对embstr编码的字符串对象执行任何修改命令（例如append）时，程序会先将对象的编码从embstr转换成raw，然后再执行修改命令。        
 
 #### **常用指令**
 

@@ -57,29 +57,35 @@ public class MyService {
 
 正确的事务传播行为可能的值如下:
 
-**1.`TransactionDefinition.PROPAGATION_REQUIRED`**
+**`TransactionDefinition.PROPAGATION_REQUIRED`**
 
-使用的最多的一个事务传播行为，我们平时经常使用的`@Transactional`注解默认使用就是这个事务传播行为。**如果当前存在事务，则加入该事务；如果当前没有事务，则创建一个新的事务。**
+使用的最多的一个事务传播行为，我们平时经常使用的`@Transactional`注解默认使用就是这个事务传播行为。**如果外部存在事务，则加入该事务；如果外部没有事务，则创建一个新的事务。**，常用于增删改
 
-**`2.TransactionDefinition.PROPAGATION_REQUIRES_NEW`**
+**`TransactionDefinition.PROPAGATION_SUPPORTS`**: **如果外部存在事务，则加入该事务；如果外部没有事务，则以非事务的方式继续运行。**，常用于查询
 
-创建一个新的事务，**如果当前存在事务，则把当前事务挂起**。也就是说不管外部方法是否开启事务，`Propagation.REQUIRES_NEW`修饰的内部方法会新开启自己的事务，且开启的事务相互独立，互不干扰。
+**`TransactionDefinition.PROPAGATION_REQUIRES_NEW`**
 
-**3.`TransactionDefinition.PROPAGATION_NESTED`**
+**不管外部存不存在事务，都创建事务**，常用内部和外部事务不关联的业务场景，如日志
+
+`Propagation.REQUIRES_NEW`修饰的内部方法会新开启自己的事务，且开启的事务相互独立，互不干扰。
+
+**`TransactionDefinition.PROPAGATION_NESTED`**
 
 如果当前存在事务，则创建一个事务作为当前事务的嵌套事务来运行；嵌套事务是一个单独的事务，它有自己的保存点，可以回滚到嵌套事务开始之前的状态。如果当前没有事务，则该取值等价于`TransactionDefinition.PROPAGATION_REQUIRED`。
 
-**4.`TransactionDefinition.PROPAGATION_MANDATORY`**
+**`TransactionDefinition.PROPAGATION_MANDATORY`**
 
 如果当前存在事务，则加入该事务；如果当前没有事务，则抛出异常。（mandatory：强制性）
 
-这个使用的很少。
+这个使用的很少
 
 若是错误的配置以下 3 种事务传播行为，事务将不会发生回滚：
 
 - **`TransactionDefinition.PROPAGATION_SUPPORTS`**: 如果当前存在事务，则加入该事务；如果当前没有事务，则以非事务的方式继续运行。
 - **`TransactionDefinition.PROPAGATION_NOT_SUPPORTED`**: 以非事务方式运行，如果当前存在事务，则把当前事务挂起。
 - **`TransactionDefinition.PROPAGATION_NEVER`**: 以非事务方式运行，如果当前存在事务，则抛出异常。
+
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240409204628518.png" alt="image-20240409204628518" style="zoom:50%;" />
 
 
 
