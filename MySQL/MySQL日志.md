@@ -10,7 +10,7 @@
 
 如果我们每次在事务执行过程中，都记录下回滚时需要的信息到一个日志里，那么在事务执行中途发生了 MySQL 崩溃后，就不用担心无法回滚到事务之前的数据，我们可以通过这个日志回滚到事务之前的数据。
 
-实现这一机制就是 **undo log（回滚日志），它保证了事务的 [ACID 特性 (opens new window)](https://xiaolincoding.com/mysql/transaction/mvcc.html#事务有哪些特性)中的原子性（Atomicity）**。
+实现这一机制就是 **undo log（回滚日志），它保证了事务的 [ACID 特性 (opens new window)](https://xiaolincoding.com/mysql/transaction/mvcc.html#事务有哪些特性)中的原子性（Atomicity）**
 
 
 
@@ -213,7 +213,7 @@ redo log buffer 默认大小 16 MB，可以通过 `innodb_log_Buffer_size` 参�
 
 除此之外，InnoDB 还提供了另外两种策略，由参数 `innodb_flush_log_at_trx_commit` 参数控制，可取的值有：0、1、2，默认值为 1，这三个值分别代表的策略如下：
 
-- 当设置该**参数为 0 时**，表示每次事务提交时 ，还是**将 redo log 留在 redo log buffer 中** ，该模式下在事务提交时不会主动触发写入磁盘的操作。针对参数 0 ：后台线程每隔1s会把缓存在 redo log buffer 中的 redo log ，通过调用 `write()` 写到操作系统的 Page Cache，然后调用 `fsync()` 持久化到磁盘。**所以参数为 0 的策略，MySQL 进程的崩溃会导致上一秒钟所有事务数据的丢失**;
+- 当设置该**参数为 0 时**，表示每次事务提交时 ，还是**将 redo log 留在 redo log buffer 中** ，该模式下在事务提交时不会主动触发写入磁盘的操作。针对参数 0 ：后台线程每隔1s会把缓存在 redo log buffer 中的 redo log ，通过调用 `write()` 写到操作系统的 Page Cache，然后调用 `fsync()` 持久化到磁盘。**所以参数为 0 的策略，MySQL 进程的崩溃会导致上一秒钟所有事务数据的丢失**
 
 - 当设置该**参数为 1 时**，表示每次事务提交时，都**将缓存在 redo log buffer 里的 redo log 直接持久化到磁盘**，这样可以保证 MySQL 异常重启之后数据不会丢失。
 
@@ -290,7 +290,7 @@ binlog 文件是记录了所有**数据库表结构变更和表数据修改**的
 
 *4、用途不同：*
 
-- binlog 用于**备份恢复、主从复制**；
+- binlog 用于**备份恢复、主从复制**
 - redo log 用于**掉电**等故障恢复。
 
 **如果不小心整个数据库的数据被删除了，能使用 redo log 文件恢复数据吗？**

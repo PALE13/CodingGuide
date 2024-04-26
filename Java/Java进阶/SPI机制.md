@@ -4,7 +4,7 @@ SPI（Service Provider Interface）是 Java 中一种用于**实现服务发现�
 
 
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240305214709454.png" alt="image-20240305214709454" style="zoom:50%;" />
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240305214709454.png" alt="image-20240305214709454" style="zoom: 33%;" />
 
 
 
@@ -18,13 +18,9 @@ SPI（Service Provider Interface）是 Java 中一种用于**实现服务发现�
 
 
 
-
-
-
-
 ### **实战演示**
 
-SLF4J （Simple Logging Facade for Java）是 Java 的一个日志门面（接口），其具体实现有几种，比如：Logback、Log4j、Log4j2 等等，而且还可以切换，在切换日志具体实现的时候我们是不需要更改项目代码的，只需要在 Maven 依赖里面修改一些 pom 依赖就好了。
+SLF4J （Simple Logging Facade for Java）是 Java 的一个日志门面（接口），其具体实现有几种，比如：Logback、Log4j、Log4j2 等等，**而且还可以切换，在切换日志具体实现的时候我们是不需要更改项目代码的**，只需要在 Maven 依赖里面修改一些 pom 依赖就好了。
 
 <img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240401095623282.png" alt="image-20240401095623282" style="zoom: 67%;" />
 
@@ -232,7 +228,7 @@ public class TestJavaSPI {
 > Logback info 打印日志：你好
 >  Logback debug 打印日志：测试 Java SPI 机制
 
-说明导入 jar 包中的实现类生效了。
+说明导入 jar 包中的实现类生效了,
 
 如果我们不导入具体的实现类的 jar 包，那么此时程序运行的结果就会是：
 

@@ -471,11 +471,9 @@ mysql> select * from user where age >= 22  for update;
 
 这是因为事务 A的 update 语句中 where 条件没有索引列，触发了全表扫描，在扫描过程中会对索引加锁，所以全表扫描的场景下，所有记录都会被加锁，也就是这条 update 语句产生了 4 个记录锁和 5 个间隙锁，相当于锁住了全表。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/63e055617720853f5b64c99576227c09.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/63e055617720853f5b64c99576227c09.png" alt="img" style="zoom:50%;" />
 
 因此，当在数据量非常大的数据库表执行 update 语句时，如果没有使用索引，就会给全表的加上 next-key 锁， 那么锁就会持续很长一段时间，直到事务结束，而这期间除了 `select ... from`语句，其他语句都会被锁住不能执行，业务会因此停滞。
-
-
 
 
 

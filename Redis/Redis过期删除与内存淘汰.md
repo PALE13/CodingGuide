@@ -160,7 +160,7 @@ Redis 在访问或者修改 key 之前，都会调用 expireIfNeeded 函数对�
 
   
 
-> **Redis 是怎么实现定期删除的？**
+**Redis 是怎么实现定期删除的？**
 
 再回忆一下，定期删除策略的做法：**每隔一段时间「随机」从数据库中取出一定数量的 key 进行检查，并删除其中的过期key。**
 
@@ -346,7 +346,7 @@ Redis 对象头中的 lru 字段，在 LRU 算法下和 LFU 算法下使用方�
 
 **在 LFU 算法中**，Redis对象头的 24 bits 的 lru 字段被分成两段来存储，高 16bit 存储 ldt(Last Decrement Time)，低 8bit 存储 logc(Logistic Counter)。
 
-![img](https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E8%BF%87%E6%9C%9F%E7%AD%96%E7%95%A5/lru%E5%AD%97%E6%AE%B5.png)
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E8%BF%87%E6%9C%9F%E7%AD%96%E7%95%A5/lru%E5%AD%97%E6%AE%B5.png" alt="img" style="zoom: 33%;" />
 
 - ldt 是用来记录 key 的访问时间戳；
 - logc 是用来记录 key 的访问频次，它的值越小表示使用频率越低，越容易淘汰，每个新加入的 key 的logc 初始值为 5。

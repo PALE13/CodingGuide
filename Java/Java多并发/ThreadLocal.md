@@ -77,3 +77,7 @@ static class Entry extends WeakReference<ThreadLocal<?>> {
 
 - **及时清理：** 在使用完 `ThreadLocal` 后，及时调用 `remove` 方法清理。可以使用 `try-with-resources` 或者 `finally` 块确保在线程结束时调用 `remove`。
 
+
+
+
+

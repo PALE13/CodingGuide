@@ -138,7 +138,7 @@ Redis 实现的 SDS 的结构就把上面这些问题解决了，接下来我们
 
 下图就是 Redis 5.0 的 SDS 的数据结构：
 
-![img](https://cdn.xiaolincoding.com//mysql/other/516738c4058cdf9109e40a7812ef4239.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/516738c4058cdf9109e40a7812ef4239.png" alt="img" style="zoom: 67%;" />
 
 结构中的每个成员变量分别介绍下：
 
@@ -261,7 +261,7 @@ int main() {
 
 大家猜猜这个结构体大小是多少？我先直接说答案，这个结构体大小计算出来是 8。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/35820959e8cf4376391c427ed7f81495.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/35820959e8cf4376391c427ed7f81495.png" alt="img" style="zoom:50%;" />
 
 这是因为默认情况下，编译器是使用「字节对齐」的方式分配内存，虽然 char 类型只占一个字节，但是由于成员变量里有 int 类型，它占用了 4 个字节，所以在成员变量为 char 类型分配内存时，会分配 4 个字节，其中这多余的 3 个字节是为了字节对齐而分配的，相当于有 3 个字节被浪费掉了。
 
@@ -316,7 +316,7 @@ typedef struct listNode {
 
 有前置节点和后置节点，可以看的出，这个是一个双向链表。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/4fecbf7f63c73ec284a4821e0bfe2843.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/4fecbf7f63c73ec284a4821e0bfe2843.png" alt="img" style="zoom: 67%;" />
 
 #### **链表结构设计**
 
@@ -397,7 +397,7 @@ Redis 的链表实现优点如下：
 
 另外，压缩列表节点（entry）的构成如下：
 
-<img src="https://cdn.xiaolincoding.com//mysql/other/a3b1f6235cf0587115b21312fe60289c.png" alt="img" style="zoom:67%;" />
+<img src="https://cdn.xiaolincoding.com//mysql/other/a3b1f6235cf0587115b21312fe60289c.png" alt="img" style="zoom: 50%;" />
 
 压缩列表节点包含三部分内容：
 
@@ -416,7 +416,7 @@ Redis 的链表实现优点如下：
 
 encoding 属性的空间大小跟数据是字符串还是整数，以及字符串的长度有关，如下图（下图中的 content 表示的是实际数据，即本文的 data 字段）：
 
-![img](https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A8%E7%BC%96%E7%A0%81.png)
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A8%E7%BC%96%E7%A0%81.png" alt="img" style="zoom:50%;" />
 
 - 如果**当前节点的数据是整数**，则 encoding 会使用 **1 字节的空间**进行编码，也就是 encoding 长度为 1 字节。通过 encoding 确认了整数类型，就可以确认整数数据的实际大小了，比如如果 encoding 编码确认了数据是 int16 整数，那么 data 的长度就是 int16 的大小。
 - 如果**当前节点的数据是字符串，根据字符串的长度大小**，encoding 会使用 **1 字节/2字节/5字节的空间**进行编码，encoding 编码的前两个 bit 表示数据的类型，后续的其他 bit 标识字符串数据的实际长度，即 data 的长度。
@@ -434,19 +434,19 @@ encoding 属性的空间大小跟数据是字符串还是整数，以及字符�
 
 现在假设一个压缩列表中有多个连续的、长度在 250～253 之间的节点，如下图：
 
-![img](https://cdn.xiaolincoding.com//mysql/other/462c6a65531667f2bcf420953b0aded9.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/462c6a65531667f2bcf420953b0aded9.png" alt="img" style="zoom: 67%;" />
 
 因为这些节点长度值小于 254 字节，所以 prevlen 属性需要用 1 字节的空间来保存这个长度值。
 
 这时，如果将一个长度大于等于 254 字节的新节点加入到压缩列表的表头节点，即新节点将成为 e1 的前置节点，如下图：
 
-![img](https://cdn.xiaolincoding.com//mysql/other/d1a6deff4672580609c99a5b06bf3429.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/d1a6deff4672580609c99a5b06bf3429.png" alt="img" style="zoom: 67%;" />
 
 因为 e1 节点的 prevlen 属性只有 1 个字节大小，无法保存新节点的长度，此时就需要对压缩列表的空间重分配操作，并将 e1 节点的 prevlen 属性从原来的 1 字节大小扩展为 5 字节大小。
 
 多米诺牌的效应就此开始。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/1f0e5ae7ab749078cadda5ba0ed98eac.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/1f0e5ae7ab749078cadda5ba0ed98eac.png" alt="img" style="zoom: 50%;" />
 
 e1 原本的长度在 250～253 之间，因为刚才的扩展空间，此时 e1 的长度就大于等于 254 了，因此原本 e2 保存 e1 的 prevlen 属性也必须从 1 字节扩展至 5 字节大小。
 
@@ -503,7 +503,7 @@ typedef struct dictht {
 
 可以看到，哈希表是一个数组（dictEntry **table），数组的每个元素是一个指向「哈希表节点（dictEntry）」的指针。
 
-<img src="https://cdn.xiaolincoding.com//mysql/other/dc495ffeaa3c3d8cb2e12129b3423118.png" alt="img" style="zoom: 67%;" />
+<img src="https://cdn.xiaolincoding.com//mysql/other/dc495ffeaa3c3d8cb2e12129b3423118.png" alt="img" style="zoom: 50%;" />
 
 哈希表节点的结构如下：
 
@@ -577,7 +577,7 @@ typedef struct dict {
 
 之所以定义了 2 个哈希表，是因为进行 rehash 的时候，需要用上 2 个哈希表了。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/2fedbc9cd4cb7236c302d695686dd478.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/2fedbc9cd4cb7236c302d695686dd478.png" alt="img" style="zoom:50%;" />
 
 在正常服务请求阶段，插入的数据，都会写入到「哈希表 1」，此时的「哈希表 2 」 并没有被分配空间。
 
@@ -589,7 +589,7 @@ typedef struct dict {
 
 为了方便你理解，我把 rehash 这三个过程画在了下面这张图：
 
-![img](https://cdn.xiaolincoding.com//mysql/other/cabce0ce7e320bc9d9b5bde947b6811b.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/cabce0ce7e320bc9d9b5bde947b6811b.png" alt="img" style="zoom:50%;" />
 
 这个过程看起来简单，但是其实第二步很有问题，**如果「哈希表 1 」的数据量非常大，那么在迁移至「哈希表 2 」的时候，因为会涉及大量的数据拷贝，此时可能会对 Redis 造成阻塞，无法服务其他请求**。
 
@@ -619,7 +619,7 @@ rehash 的触发条件跟**负载因子（load factor）**有关系。
 
 负载因子可以通过下面这个公式计算：
 
-![img](https://cdn.xiaolincoding.com//mysql/other/85f597f7851b90d6c78bb0d8e39690fc.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/85f597f7851b90d6c78bb0d8e39690fc.png" alt="img" style="zoom:50%;" />
 
 触发 rehash 操作的条件，主要有两个：
 
@@ -661,15 +661,15 @@ typedef struct intset {
 
 举个例子，假设有一个整数集合里有 3 个类型为 int16_t 的元素。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/5dbdfa7cfbdd1d12a4d9458c6c90d472.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/5dbdfa7cfbdd1d12a4d9458c6c90d472.png" alt="img" style="zoom:50%;" />
 
 现在，往这个整数集合中加入一个新元素 65535，这个新元素需要用 int32_t 类型来保存，所以整数集合要进行升级操作，首先需要为 contents 数组扩容，**在原本空间的大小之上再扩容多 80 位（4x32-3x16=80），这样就能保存下 4 个类型为 int32_t 的元素**。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/e2e3e19fc934e70563fbdfde2af39a2b.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/e2e3e19fc934e70563fbdfde2af39a2b.png" alt="img" style="zoom:50%;" />
 
 扩容完 contents 数组空间大小后，需要将之前的三个元素转换为 int32_t 类型，并将转换后的元素放置到正确的位上面，并且需要维持底层数组的有序性不变，整个转换过程如下：
 
-<img src="https://cdn.xiaolincoding.com//mysql/other/e84b052381e240eeb8cc97d6b729968b.png" alt="img" style="zoom:67%;" />
+<img src="https://cdn.xiaolincoding.com//mysql/other/e84b052381e240eeb8cc97d6b729968b.png" alt="img" style="zoom: 50%;" />
 
 > 整数集合升级有什么好处呢？
 
@@ -714,7 +714,7 @@ Zset 对象在使用跳表作为数据结构的时候，是使用由「哈希表
 
 那跳表长什么样呢？我这里举个例子，下图展示了一个层级为 3 的跳表。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/2ae0ed790c7e7403f215acb2bd82e884.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/2ae0ed790c7e7403f215acb2bd82e884.png" alt="img" style="zoom:50%;" />
 
 图中头节点有 L0~L2 三个头指针，分别指向了不同层级的节点，然后每个层级的节点都通过指针连接起来：
 
@@ -805,7 +805,7 @@ typedef struct zskiplist {
 
 举个例子，下图的跳表，第二层的节点数量只有 1 个，而第一层的节点数量有 6 个。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/2802786ab4f52c1e248904e5cef33a74.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/2802786ab4f52c1e248904e5cef33a74.png" alt="img" style="zoom:50%;" />
 
 这时，如果想要查询节点 6，那基本就跟链表的查询复杂度一样，就需要在第一层的节点中依次顺序查找，复杂度就是 O(N) 了。所以，为了降低查询复杂度，我们就需要维持相邻层结点数间的关系。
 
@@ -813,7 +813,7 @@ typedef struct zskiplist {
 
 下图的跳表就是，相邻两层的节点数量的比例是 2 : 1。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/cdc14698f629c74bf5a239cc8a611aeb.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/cdc14698f629c74bf5a239cc8a611aeb.png" alt="img" style="zoom:50%;" />
 
 > 那怎样才能维持相邻两层的节点数量的比例为 2 : 1 呢？
 
@@ -925,7 +925,7 @@ typedef struct quicklistNode {
 
 我画了一张图，方便你理解 quicklist 数据结构。
 
-![img](https://cdn.xiaolincoding.com//mysql/other/f46cbe347f65ded522f1cc3fd8dba549.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/f46cbe347f65ded522f1cc3fd8dba549.png" alt="img" style="zoom:50%;" />
 
 **在向 quicklist 添加一个元素的时候，不会像普通的链表那样，直接新建一个链表节点。而是会检查插入位置的压缩列表是否能容纳该元素，如果能容纳就直接保存到 quicklistNode 结构里的压缩列表，如果不能容纳，才会新建一个新的 quicklistNode 结构。可以减少连锁更新带来的性能影响**
 
@@ -947,13 +947,13 @@ listpack 采用了压缩列表的很多优秀的设计，比如还是用一块�
 
 我们先看看 listpack 结构：
 
-![img](https://cdn.xiaolincoding.com//mysql/other/4d2dc376b5fd68dae70d9284ae82b73a.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/4d2dc376b5fd68dae70d9284ae82b73a.png" alt="img" style="zoom:50%;" />
 
 listpack 头包含两个属性，分别记录了 listpack 总字节数和元素数量，然后 listpack 末尾也有个结尾标识。图中的 listpack entry 就是 listpack 的节点了。
 
 每个 listpack 节点结构如下：
 
-![img](https://cdn.xiaolincoding.com//mysql/other/c5fb0a602d4caaca37ff0357f05b0abf.png)
+<img src="https://cdn.xiaolincoding.com//mysql/other/c5fb0a602d4caaca37ff0357f05b0abf.png" alt="img" style="zoom:50%;" />
 
 主要包含三个方面内容：
 

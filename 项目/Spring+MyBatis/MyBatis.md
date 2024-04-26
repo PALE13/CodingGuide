@@ -82,6 +82,52 @@ Dao 接口的工作原理是 JDK 动态代理，MyBatis 运行时会使用 JDK �
 
 
 
+### MyBatis 是如何进行分页的？分页插件的原理是什么？
+
+**(1)** MyBatis 使用 RowBounds 对象进行分页，它是针对 ResultSet 结果集执行的内存分页，而非物理分页；
+
+**(2)** 可以在 sql 内直接书写带有物理分页的参数来完成物理分页功能；
+
+**(3)** 也可以使用分页插件来完成物理分页。
+
+分页插件的基本原理是使用 MyBatis 提供的插件接口，实现自定义插件，在插件的拦截方法内拦截待执行的 sql，然后重写 sql，根据 dialect 方言，添加对应的物理分页语句和物理分页参数。
+
+举例：`select _ from student` ，拦截 sql 后重写为：`select t._ from （select \* from student）t limit 0，10`
+
+
+
+
+
+### 简述 MyBatis 的插件运行原理，以及如何编写一个插件
+
+MyBatis 仅可以编写针对 `ParameterHandler`、 `ResultSetHandler`、 `StatementHandler`、 `Executor` 这 4 种接口的插件，MyBatis 使用 JDK 的动态代理，为需要拦截的接口生成代理对象以实现接口方法拦截功能，每当执行这 4 种接口对象的方法时，就会进入拦截方法，具体就是 `InvocationHandler` 的 `invoke()` 方法，当然，只会拦截那些你指定需要拦截的方法。
+
+实现 MyBatis 的 `Interceptor` 接口并复写 `intercept()` 方法，然后在给插件编写注解，指定要拦截哪一个接口的哪些方法即可，记住，别忘了在配置文件中配置你编写的插件。
+
+
+
+
+
+### MyBatis 动态 sql 是做什么的？都有哪些动态 sql？能简述一下动态 sql 的执行原理不？
+
+MyBatis 动态 sql 可以让我们在 xml 映射文件内，以标签的形式编写动态 sql，完成逻辑判断和动态拼接 sql 的功能。其执行原理为，使用 OGNL 从 sql 参数对象中计算表达式的值，根据表达式的值动态拼接 sql，以此来完成动态 sql 的功能。
+
+MyBatis 提供了 9 种动态 sql 标签:
+
+- `<if></if>`
+- `<where></where>(trim,set)`
+- `<choose></choose>（when, otherwise）`
+- `<foreach></foreach>`
+- `<bind/>`
+
+关于 MyBatis 动态 SQL 的详细介绍，请看这篇文章：[Mybatis 系列全解（八）：Mybatis 的 9 大动态 SQL 标签你知道几个？open in new window](https://segmentfault.com/a/1190000039335704) 。
+
+关于这些动态 SQL 的具体使用方法，请看这篇文章：[Mybatis【13】-- Mybatis 动态 sql 标签怎么使用？](https://cloud.tencent.com/developer/article/1943349)
+
+
+
+
+
 
 
 
