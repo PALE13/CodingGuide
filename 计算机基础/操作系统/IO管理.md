@@ -40,8 +40,6 @@ DMA 技术，也就是**直接内存访问（Direct Memory Access）** 技术。
 
 ## **NIO 零拷贝**
 
-
-
 ### **传统的网络文件传输的问题？**
 
 如果服务端要提供文件传输的功能，我们能想到的最简单的方式是：将磁盘上的文件读取出来，然后通过网络协议发送给客户端。
@@ -170,8 +168,6 @@ scatter-gather: on
 
 - `MappedByteBuffer` 是 NIO 基于内存映射（`mmap`）这种零拷⻉⽅式的提供的⼀种实现，底层实际是调用了 Linux 内核的 **`mmap` 系统调用**。它可以将一个文件或者文件的一部分映射到内存中，形成一个**虚拟内存文件**，这样就可以直接操作内存中的数据，而不需要通过系统调用来读写文件。
 - `FileChannel` 的`transferTo()/transferFrom()`是 NIO 基于发送文件（`sendfile`）这种零拷贝方式的提供的一种实现，底层实际是调用了 Linux 内核的 `sendfile`系统调用。它可以直接将文件数据从磁盘发送到网络，而不需要经过用户空间的缓冲区。关于`FileChannel`的用法可以看看这篇文章：[Java NIO 文件通道 FileChannel 用法open in new window](https://www.cnblogs.com/robothy/p/14235598.html)。
-
-
 
 
 

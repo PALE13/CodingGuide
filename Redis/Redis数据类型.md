@@ -1,4 +1,4 @@
-## Redis 常见数据类型和应用场景
+## **Redis 常见数据类型和应用场景**
 
 我们都知道 Redis 提供了丰富的数据类型，常见的有五种：**String（字符串），Hash（哈希），List（列表），Set（集合）、Zset（有序集合）**。
 
@@ -6,7 +6,7 @@
 
 
 
-###  String
+###  **String**
 
 String 是最基本的 key-value 结构，key 是唯一标识，value 是具体的值，value其实不仅是字符串， 也可以是数字（整数或浮点数），value 最多可以容纳的数据长度是 `512M`。
 
@@ -219,7 +219,7 @@ end
 
 
 
-### List
+### **List**
 
 List 列表是简单的字符串列表，**按照插入顺序排序**，可以从头部或尾部向 List 列表添加元素。
 
@@ -236,7 +236,7 @@ List 类型的底层数据结构是由**双向链表或压缩列表**实现的�
 
 #### **常用命令**
 
-![img](https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/list.png)
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/list.png" alt="img" style="zoom: 33%;" />
 
 ```shell
 # 将一个或多个值value插入到key列表的表头(最左边)，最后的值在最前面
@@ -261,6 +261,14 @@ BRPOP key [key ...] timeout
 
 ##### **消息队列**
 
+实际项目中使用 Redis 来做消息队列的非常少，毕竟有更成熟的消息队列中间件可以用。
+
+**不建议使用 Redis 来做消息队列。和专业的消息队列相比，还是有很多欠缺的地方。**
+
+**Redis 2.0 之前，如果想要使用 Redis 来做消息队列的话，只能通过 List 来实现。**
+
+
+
 消息队列在存取消息时，必须要满足三个需求，分别是**消息保序、处理重复的消息和保证消息可靠性**。
 
 Redis 的 List 和 Stream 两种数据类型，就可以满足消息队列的这三个需求。我们先来了解下基于 List 的消息队列实现方法，后面在介绍 Stream 数据类型时候，在详细说说 Stream。
@@ -284,7 +292,7 @@ List 可以使用 LPUSH + RPOP （或者反过来，RPUSH+LPOP）命令实现消
 
 为了解决这个问题，Redis提供了 BRPOP 命令。**BRPOP命令也称为阻塞式读取，客户端在没有读到队列数据时，自动阻塞，直到有新的数据写入队列，再开始读取新数据**。和消费者程序自己不停地调用RPOP命令相比，这种方式能节省CPU开销。
 
-<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97.png" alt="img" style="zoom:50%;" />
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97.png" alt="img" style="zoom: 33%;" />
 
 *2、如何处理重复的消息？*
 
@@ -327,7 +335,7 @@ List 可以使用 LPUSH + RPOP （或者反过来，RPUSH+LPOP）命令实现消
 
 
 
-###  Hash
+###  **Hash**
 
 Hash 是一个键值对（key - value）集合，其中 value 的形式如： `value=[{field1，value1}，...{fieldN，valueN}]`。Hash 特别适合用于存储对象。
 
@@ -419,7 +427,7 @@ Redis Hash 存储其结构如下图：
 
 当前仅仅是将商品ID存储到了Redis 中，在回显商品具体信息的时候，还需要拿着商品 id 查询一次数据库，获取完整的商品的信息。
 
-### Set
+### **Set**
 
 Set 类型是一个无序并唯一的键值集合，**它的存储顺序不会按照插入的先后顺序进行存储。**
 
@@ -627,7 +635,7 @@ key为抽奖活动名，value为员工名称，把所有员工名称放入抽奖
 
 
 
-### Zset
+### **Zset**
 
 Zset 类型（有序集合类型）相比于 Set 类型多了一个排序属性 score（分值），对于有序集合 ZSet 来说，**每个存储元素相当于有两个值组成的**，一个是有序集合的元素值，一个是排序值。
 
@@ -846,7 +854,7 @@ Zset 类型（Sorted Set，有序集合） 可以根据元素的权重来排序�
 
 
 
-### BitMap
+### **BitMap**
 
 Bitmap，即位图，是一串连续的二进制数组（0和1），可以通过偏移量（offset）定位元素。BitMap通过最小的单位bit来进行`0|1`的设置，表示某个元素的值或者状态，时间复杂度为O(1)。
 
@@ -994,4 +1002,376 @@ BITCOUNT destmap
 ```
 
 即使一天产生一个亿的数据，Bitmap 占用的内存也不大，大约占 12 MB 的内存（10^8/8/1024/1024），7 天的 Bitmap 的内存开销约为 84 MB。同时我们最好给 Bitmap 设置过期时间，让 Redis 删除过期的打卡数据，节省内存。
+
+
+
+
+
+### **HyperLogLog**
+
+Redis HyperLogLog 是 Redis 2.8.9 版本新增的数据类型，是一种用于「统计基数」的数据集合类型，基数统计就是指统计一个集合中不重复的元素个数。但要注意，HyperLogLog 是统计规则是基于概率完成的，不是非常准确，标准误算率是 0.81%。
+
+所以，简单来说 HyperLogLog **提供不精确的去重计数**。
+
+HyperLogLog 的优点是，在输入元素的数量或者体积非常非常大时，计算基数所需的内存空间总是固定的、并且是很小的。
+
+在 Redis 里面，**每个 HyperLogLog 键只需要花费 12 KB 内存，就可以计算接近 `2^64` 个不同元素的基数**，和元素越多就越耗费内存的 Set 和 Hash 类型相比，HyperLogLog 就非常节省空间。
+
+这什么概念？举个例子给大家对比一下。
+
+用 Java 语言来说，一般 long 类型占用 8 字节，而 1 字节有 8 位，即：1 byte = 8 bit，即 long 数据类型最大可以表示的数是：`2^63-1`。对应上面的`2^64`个数，假设此时有`2^63-1`这么多个数，从 `0 ~ 2^63-1`，按照`long`以及`1k = 1024 字节`的规则来计算内存总数，就是：`((2^63-1) * 8/1024)K`，这是很庞大的一个数，存储空间远远超过`12K`，而 `HyperLogLog` 却可以用 `12K` 就能统计完。
+
+#### **内部实现**
+
+HyperLogLog 的实现涉及到很多数学问题，太费脑子了，我也没有搞懂，如果你想了解一下，课下可以看看这个：[HyperLogLog (opens new window)](https://en.wikipedia.org/wiki/HyperLogLog)。
+
+#### **应用场景**
+
+##### **百万级网页 UV 计数**
+
+Redis HyperLogLog 优势在于只需要花费 12 KB 内存，就可以计算接近 2^64 个元素的基数，和元素越多就越耗费内存的 Set 和 Hash 类型相比，HyperLogLog 就非常节省空间。
+
+所以，非常适合统计百万级以上的网页 UV 的场景。
+
+在统计 UV 时，你可以用 PFADD 命令（用于向 HyperLogLog 中添加新元素）把访问页面的每个用户都添加到 HyperLogLog 中。
+
+```shell
+PFADD page1:uv user1 user2 user3 user4 user5
+```
+
+接下来，就可以用 PFCOUNT 命令直接获得 page1 的 UV 值了，这个命令的作用就是返回 HyperLogLog 的统计结果。
+
+```shell
+PFCOUNT page1:uv
+```
+
+不过，有一点需要你注意一下，HyperLogLog 的统计规则是基于概率完成的，所以它给出的统计结果是有一定误差的，标准误算率是 0.81%。
+
+这也就意味着，你使用 HyperLogLog 统计的 UV 是 100 万，但实际的 UV 可能是 101 万。虽然误差率不算大，但是，如果你需要精确统计结果的话，最好还是继续用 Set 或 Hash 类型。
+
+
+
+### **GEO**
+
+Redis GEO 是 Redis 3.2 版本新增的数据类型，主要用于存储地理位置信息，并对存储的信息进行操作。
+
+在日常生活中，我们越来越依赖搜索“附近的餐馆”、在打车软件上叫车，这些都离不开基于位置信息服务（Location-Based Service，LBS）的应用。LBS 应用访问的数据是和人或物关联的一组经纬度信息，而且要能查询相邻的经纬度范围，GEO 就非常适合应用在 LBS 服务的场景中。
+
+#### **内部实现**
+
+GEO 本身并没有设计新的底层数据结构，而是直接使用了 Sorted Set 集合类型。
+
+GEO 类型使用 GeoHash 编码方法实现了经纬度到 Sorted Set 中元素权重分数的转换，这其中的两个关键机制就是「对二维地图做区间划分」和「对区间进行编码」。一组经纬度落在某个区间后，就用区间的编码值来表示，并把编码值作为 Sorted Set 元素的权重分数。
+
+这样一来，我们就可以把经纬度保存到 Sorted Set 中，利用 Sorted Set 提供的“按权重进行有序范围查找”的特性，实现 LBS 服务中频繁使用的“搜索附近”的需求。
+
+#### **常用命令**
+
+```shell
+# 存储指定的地理空间位置，可以将一个或多个经度(longitude)、纬度(latitude)、位置名称(member)添加到指定的 key 中。
+GEOADD key longitude latitude member [longitude latitude member ...]
+
+# 从给定的 key 里返回所有指定名称(member)的位置（经度和纬度），不存在的返回 nil。
+GEOPOS key member [member ...]
+
+# 返回两个给定位置之间的距离。
+GEODIST key member1 member2 [m|km|ft|mi]
+
+# 根据用户给定的经纬度坐标来获取指定范围内的地理位置集合。
+GEORADIUS key longitude latitude radius m|km|ft|mi [WITHCOORD] [WITHDIST] [WITHHASH] [COUNT count] [ASC|DESC] [STORE key] [STOREDIST key]
+```
+
+#### **应用场景**
+
+##### **滴滴叫车**
+
+这里以滴滴叫车的场景为例，介绍下具体如何使用 GEO 命令：GEOADD 和 GEORADIUS 这两个命令。
+
+假设车辆 ID 是 33，经纬度位置是（116.034579，39.030452），我们可以用一个 GEO 集合保存所有车辆的经纬度，集合 key 是 cars:locations。
+
+执行下面的这个命令，就可以把 ID 号为 33 的车辆的当前经纬度位置存入 GEO 集合中：
+
+```shell
+GEOADD cars:locations 116.034579 39.030452 33
+```
+
+当用户想要寻找自己附近的网约车时，LBS 应用就可以使用 GEORADIUS 命令。
+
+例如，LBS 应用执行下面的命令时，Redis 会根据输入的用户的经纬度信息（116.054579，39.030452 ），查找以这个经纬度为中心的 5 公里内的车辆信息，并返回给 LBS 应用。
+
+```shell
+GEORADIUS cars:locations 116.054579 39.030452 5 km ASC COUNT 10
+```
+
+
+
+### **Stream**
+
+Redis Stream 是 Redis 5.0 版本新增加的数据类型，Redis 专门为消息队列设计的数据类型。
+
+在 Redis 5.0 Stream 没出来之前，消息队列的实现方式都有着各自的缺陷，例如：
+
+- 发布订阅模式，不能持久化也就无法可靠的保存消息，并且对于离线重连的客户端不能读取历史消息的缺陷；
+- **List 实现消息队列的方式不能重复消费，一个消息消费完就会被删除，而且生产者需要自行实现全局唯一 ID**。
+
+基于以上问题，Redis 5.0 便推出了 Stream 类型也是此版本最重要的功能，用于完美地实现消息队列，它支持消息的持久化、支持自动生成全局唯一 ID、支持 ack 确认消息的模式、支持消费组模式等，让消息队列更加的稳定和可靠。
+
+#### **常见命令**
+
+Stream 消息队列操作命令：
+
+- XADD：插入消息，保证有序，可以自动生成全局唯一 ID；
+- XLEN ：查询消息长度；
+- XREAD：用于读取消息，可以按 ID 读取数据；
+- XDEL ： 根据消息 ID 删除消息；
+- DEL ：删除整个 Stream；
+- XRANGE ：读取区间消息
+- XREADGROUP：按消费组形式读取消息；
+- XPENDING 和 XACK：
+  - XPENDING 命令可以用来查询每个消费组内所有消费者「已读取、但尚未确认」的消息；
+  - XACK 命令用于向消息队列确认消息处理已完成；
+
+#### **应用场景**
+
+##### **消息队列**
+
+生产者通过 XADD 命令插入一条消息：
+
+```shell
+# * 表示让 Redis 为插入的数据自动生成一个全局唯一的 ID
+# 往名称为 mymq 的消息队列中插入一条消息，消息的键是 name，值是 xiaolin
+> XADD mymq * name xiaolin
+"1654254953808-0"
+```
+
+插入成功后会返回全局唯一的 ID："1654254953808-0"。消息的全局唯一 ID 由两部分组成：
+
+- 第一部分“1654254953808”是数据插入时，以毫秒为单位计算的当前服务器时间；
+- 第二部分表示插入消息在当前毫秒内的消息序号，这是从 0 开始编号的。例如，“1654254953808-0”就表示在“1654254953808”毫秒内的第 1 条消息。
+
+消费者通过 XREAD 命令从消息队列中读取消息时，可以指定一个消息 ID，并从这个消息 ID 的下一条消息开始进行读取（注意是输入消息 ID 的下一条信息开始读取，不是查询输入ID的消息）。
+
+```shell
+# 从 ID 号为 1654254953807-0 的消息开始，读取后续的所有消息（示例中一共 1 条）。
+> XREAD STREAMS mymq 1654254953807-0
+1) 1) "mymq"
+   2) 1) 1) "1654254953808-0"
+         2) 1) "name"
+            2) "xiaolin"
+```
+
+如果**想要实现阻塞读（当没有数据时，阻塞住），可以调用 XRAED 时设定 BLOCK 配置项**，实现类似于 BRPOP 的阻塞读取操作。
+
+比如，下面这命令，设置了 BLOCK 10000 的配置项，10000 的单位是毫秒，表明 XREAD 在读取最新消息时，如果没有消息到来，XREAD 将阻塞 10000 毫秒（即 10 秒），然后再返回。
+
+```shell
+# 命令最后的“$”符号表示读取最新的消息
+> XREAD BLOCK 10000 STREAMS mymq $
+(nil)
+(10.00s)
+```
+
+tream 的基础方法，使用 xadd 存入消息和 xread 循环阻塞读取消息的方式可以实现简易版的消息队列，交互流程如下图所示：
+
+![img](https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/Stream%E7%AE%80%E6%98%93.png)
+
+前面介绍的这些操作 List 也支持的，接下来看看 Stream 特有的功能。
+
+Stream 可以以使用 **XGROUP 创建消费组**，创建消费组之后，Stream 可以使用 XREADGROUP 命令让消费组内的消费者读取消息。
+
+创建两个消费组，这两个消费组消费的消息队列是 mymq，都指定从第一条消息开始读取：
+
+```shell
+# 创建一个名为 group1 的消费组，0-0 表示从第一条消息开始读取。
+> XGROUP CREATE mymq group1 0-0
+OK
+# 创建一个名为 group2 的消费组，0-0 表示从第一条消息开始读取。
+> XGROUP CREATE mymq group2 0-0
+OK
+```
+
+消费组 group1 内的消费者 consumer1 从 mymq 消息队列中读取所有消息的命令如下：
+
+```shell
+# 命令最后的参数“>”，表示从第一条尚未被消费的消息开始读取。
+> XREADGROUP GROUP group1 consumer1 STREAMS mymq >
+1) 1) "mymq"
+   2) 1) 1) "1654254953808-0"
+         2) 1) "name"
+            2) "xiaolin"
+```
+
+**消息队列中的消息一旦被消费组里的一个消费者读取了，就不能再被该消费组内的其他消费者读取了，即同一个消费组里的消费者不能消费同一条消息**。
+
+比如说，我们执行完刚才的 XREADGROUP 命令后，再执行一次同样的命令，此时读到的就是空值了：
+
+```shell
+> XREADGROUP GROUP group1 consumer1 STREAMS mymq >
+(nil)
+```
+
+但是，**不同消费组的消费者可以消费同一条消息（但是有前提条件，创建消息组的时候，不同消费组指定了相同位置开始读取消息）**。
+
+比如说，刚才 group1 消费组里的 consumer1 消费者消费了一条 id 为 1654254953808-0 的消息，现在用 group2 消费组里的 consumer1 消费者消费消息：
+
+```shell
+> XREADGROUP GROUP group2 consumer1 STREAMS mymq >
+1) 1) "mymq"
+   2) 1) 1) "1654254953808-0"
+         2) 1) "name"
+            2) "xiaolin"
+```
+
+因为我创建两组的消费组都是从第一条消息开始读取，所以可以看到第二组的消费者依然可以消费 id 为 1654254953808-0 的这一条消息。因此，不同的消费组的消费者可以消费同一条消息。
+
+使用消费组的目的是让组内的多个消费者共同分担读取消息，所以，我们通常会让每个消费者读取部分消息，从而实现消息读取负载在多个消费者间是均衡分布的。
+
+例如，我们执行下列命令，让 group2 中的 consumer1、2、3 各自读取一条消息。
+
+```shell
+# 让 group2 中的 consumer1 从 mymq 消息队列中消费一条消息
+> XREADGROUP GROUP group2 consumer1 COUNT 1 STREAMS mymq >
+1) 1) "mymq"
+   2) 1) 1) "1654254953808-0"
+         2) 1) "name"
+            2) "xiaolin"
+# 让 group2 中的 consumer2 从 mymq 消息队列中消费一条消息
+> XREADGROUP GROUP group2 consumer2 COUNT 1 STREAMS mymq >
+1) 1) "mymq"
+   2) 1) 1) "1654256265584-0"
+         2) 1) "name"
+            2) "xiaolincoding"
+# 让 group2 中的 consumer3 从 mymq 消息队列中消费一条消息
+> XREADGROUP GROUP group2 consumer3 COUNT 1 STREAMS mymq >
+1) 1) "mymq"
+   2) 1) 1) "1654256271337-0"
+         2) 1) "name"
+            2) "Tom"
+```
+
+> 基于 Stream 实现的消息队列，如何保证消费者在发生故障或宕机再次重启后，仍然可以读取未处理完的消息？
+
+Streams 会自动使用内部队列（也称为 PENDING List）留存消费组里每个消费者读取的消息，直到消费者使用 XACK 命令通知 Streams“消息已经处理完成”。
+
+消费确认增加了消息的可靠性，一般在业务处理完成之后，需要执行 XACK 命令确认消息已经被消费完成，整个流程的执行如下图所示：
+
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/%E6%B6%88%E6%81%AF%E7%A1%AE%E8%AE%A4.png" alt="img" style="zoom:50%;" />
+
+如果消费者没有成功处理消息，它就不会给 Streams 发送 XACK 命令，消息仍然会留存。此时，**消费者可以在重启后，用 XPENDING 命令查看已读取、但尚未确认处理完成的消息**。
+
+例如，我们来查看一下 group2 中各个消费者已读取、但尚未确认的消息个数，命令如下：
+
+```shell
+127.0.0.1:6379> XPENDING mymq group2
+1) (integer) 3
+2) "1654254953808-0"  # 表示 group2 中所有消费者读取的消息最小 ID
+3) "1654256271337-0"  # 表示 group2 中所有消费者读取的消息最大 ID
+4) 1) 1) "consumer1"
+      2) "1"
+   2) 1) "consumer2"
+      2) "1"
+   3) 1) "consumer3"
+      2) "1"
+```
+
+如果想查看某个消费者具体读取了哪些数据，可以执行下面的命令：
+
+```shell
+# 查看 group2 里 consumer2 已从 mymq 消息队列中读取了哪些消息
+> XPENDING mymq group2 - + 10 consumer2
+1) 1) "1654256265584-0"
+   2) "consumer2"
+   3) (integer) 410700
+   4) (integer) 1
+```
+
+可以看到，consumer2 已读取的消息的 ID 是 1654256265584-0。
+
+**一旦消息 1654256265584-0 被 consumer2 处理了，consumer2 就可以使用 XACK 命令通知 Streams，然后这条消息就会被删除**。
+
+```shell
+> XACK mymq group2 1654256265584-0
+(integer) 1
+```
+
+当我们再使用 XPENDING 命令查看时，就可以看到，consumer2 已经没有已读取、但尚未确认处理的消息了。
+
+```shell
+> XPENDING mymq group2 - + 10 consumer2
+(empty array)
+```
+
+好了，基于 Stream 实现的消息队列就说到这里了，小结一下：
+
+- 消息保序：XADD/XREAD
+- 阻塞读取：XREAD block
+- 重复消息处理：Stream 在使用 XADD 命令，会自动生成全局唯一 ID；
+- 消息可靠性：内部使用 PENDING List 自动保存消息，使用 XPENDING 命令查看消费组已经读取但是未被确认的消息，消费者使用 XACK 确认消息；
+- 支持消费组形式消费数据
+
+> Redis 基于 Stream 消息队列与专业的消息队列有哪些差距？
+
+一个专业的消息队列，必须要做到两大块：
+
+- 消息不丢。
+- 消息可堆积。
+
+*1、Redis Stream 消息会丢失吗？*
+
+使用一个消息队列，其实就分为三大块：**生产者、队列中间件、消费者**，所以要保证消息就是保证三个环节都不能丢失数据。
+
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97%E4%B8%89%E4%B8%AA%E9%98%B6%E6%AE%B5.png" alt="img" style="zoom: 50%;" />
+
+Redis Stream 消息队列能不能保证三个环节都不丢失数据？
+
+- Redis 生产者会不会丢消息？生产者会不会丢消息，取决于生产者对于异常情况的处理是否合理。 从消息被生产出来，然后提交给 MQ 的过程中，只要能正常收到 （ MQ 中间件） 的 ack 确认响应，就表示发送成功，所以只要处理好返回值和异常，如果返回异常则进行消息重发，那么这个阶段是不会出现消息丢失的。
+
+- Redis 消费者会不会丢消息？不会，因为 Stream （ MQ 中间件）会自动使用内部队列（也称为 PENDING List）留存消费组里每个消费者读取的消息，但是未被确认的消息。消费者可以在重启后，用 XPENDING 命令查看已读取、但尚未确认处理完成的消息。等到消费者执行完业务逻辑后，再发送消费确认 XACK 命令，也能保证消息的不丢失。
+
+- Redis 消息中间件会不会丢消息？
+
+  会
+
+  ，Redis 在以下 2 个场景下，都会导致数据丢失：
+
+  - AOF 持久化配置为每秒写盘，但这个写盘过程是异步的，Redis 宕机时会存在数据丢失的可能
+  - 主从复制也是异步的，[主从切换时，也存在丢失数据的可能 (opens new window)](https://xiaolincoding.com/redis/cluster/master_slave_replication.html#redis-主从切换如何减少数据丢失)。
+
+可以看到，Redis 在队列中间件环节无法保证消息不丢。像 RabbitMQ 或 Kafka 这类专业的队列中间件，在使用时是部署一个集群，生产者在发布消息时，队列中间件通常会写「多个节点」，也就是有多个副本，这样一来，即便其中一个节点挂了，也能保证集群的数据不丢失。
+
+*2、Redis Stream 消息可堆积吗？*
+
+Redis 的数据都存储在内存中，这就意味着一旦发生消息积压，则会导致 Redis 的内存持续增长，如果超过机器内存上限，就会面临被 OOM 的风险。
+
+所以 Redis 的 Stream 提供了可以指定队列最大长度的功能，就是为了避免这种情况发生。
+
+当指定队列最大长度时，队列长度超过上限后，旧消息会被删除，只保留固定长度的新消息。这么来看，Stream 在消息积压时，如果指定了最大长度，还是有可能丢失消息的。
+
+但 Kafka、RabbitMQ 专业的消息队列它们的数据都是存储在磁盘上，当消息积压时，无非就是多占用一些磁盘空间。
+
+因此，把 Redis 当作队列来使用时，会面临的 2 个问题：
+
+- Redis 本身可能会丢数据；
+- 面对消息挤压，内存资源会紧张；
+
+所以，能不能将 Redis 作为消息队列来使用，关键看你的业务场景：
+
+- 如果你的业务场景足够简单，对于数据丢失不敏感，而且消息积压概率比较小的情况下，把 Redis 当作队列是完全可以的。
+- 如果你的业务有海量消息，消息积压的概率比较大，并且不能接受数据丢失，那么还是用专业的消息队列中间件吧。
+
+> 补充：Redis 发布/订阅机制为什么不可以作为消息队列？
+
+发布订阅机制存在以下缺点，都是跟丢失数据有关：
+
+1. 发布/订阅机制没有基于任何数据类型实现，所以不具备「数据持久化」的能力，也就是发布/订阅机制的相关操作，不会写入到 RDB 和 AOF 中，当 Redis 宕机重启，发布/订阅机制的数据也会全部丢失。
+2. 发布订阅模式是“发后既忘”的工作模式，如果有订阅者离线重连之后不能消费之前的历史消息。
+3. 当消费端有一定的消息积压时，也就是生产者发送的消息，消费者消费不过来时，如果超过 32M 或者是 60s 内持续保持在 8M 以上，消费端会被强行断开，这个参数是在配置文件中设置的，默认值是 `client-output-buffer-limit pubsub 32mb 8mb 60`。
+
+所以，发布/订阅机制只适合即时通讯的场景，比如[构建哨兵集群 (opens new window)](https://xiaolincoding.com/redis/cluster/sentinel.html#哨兵集群是如何组成的)的场景采用了发布/订阅机制。
+
+
+
+
+
+
 

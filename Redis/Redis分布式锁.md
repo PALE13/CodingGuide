@@ -2,7 +2,7 @@
 
 分布式锁是用于分布式环境下并发控制的一种机制，用于控制某个资源在同一时刻只能被一个应用所使用。如下图所示：
 
-<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E5%85%AB%E8%82%A1%E6%96%87/%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81.jpg" alt="img" style="zoom:50%;" />
+<img src="https://cdn.xiaolincoding.com/gh/xiaolincoder/redis/%E5%85%AB%E8%82%A1%E6%96%87/%E5%88%86%E5%B8%83%E5%BC%8F%E9%94%81.jpg" alt="img" style="zoom: 33%;" />
 
 Redis 本身可以被多个客户端共享访问，正好就是一个共享存储系统，可以用来保存分布式锁，而且 Redis 的读写性能高，可以应对高并发的锁操作场景。
 
@@ -65,6 +65,63 @@ end
 
 
 
+### **如何实现锁的续期？**
+
+Redisson 是一个开源的 Java 语言 Redis 客户端，提供了很多开箱即用的功能，不仅仅包括多种分布式锁的实现。并且，Redisson 还支持 Redis 单机、Redis Sentinel、Redis Cluster 等多种部署架构。
+
+Redisson 中的分布式锁自带自动续期机制，使用起来非常简单，原理也比较简单，其提供了一个专门用来监控和续期锁的 **Watch Dog（ 看门狗）**，如果操作共享资源的线程还未执行完成的话，Watch Dog 会不断地延长锁的过期时间，进而保证锁不会因为超时而被释放
+
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240429154000861.png" alt="image-20240429154000861" style="zoom: 67%;" />
+
+
+
+默认情况下，每过 10 秒，看门狗就会执行续期操作，将锁的超时时间设置为 30 秒。看门狗续期前也会先判断是否需要执行续期操作，需要才会执行续期，否则取消续期操作。
+
+Watch Dog 通过调用 `renewExpirationAsync()` 方法实现锁的异步续期：
+
+```java
+protected CompletionStage<Boolean> renewExpirationAsync(long threadId) {
+    return evalWriteAsync(getRawName(), LongCodec.INSTANCE, RedisCommands.EVAL_BOOLEAN,
+            // 判断是否为持锁线程，如果是就执行续期操作，就锁的过期时间设置为 30s（默认）
+            "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then " +
+                    "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                    "return 1; " +
+                    "end; " +
+                    "return 0;",
+            Collections.singletonList(getRawName()),
+            internalLockLeaseTime, getLockName(threadId));
+}
+
+```
+
+可以看出， `renewExpirationAsync` 方法其实是调用 Lua 脚本实现的续期，这样做主要是为了保证续期操作的原子性。
+
+我这里以 Redisson 的分布式可重入锁 `RLock` 为例来说明如何使用 Redisson 实现分布式锁：
+
+```java
+// 1.获取指定的分布式锁对象
+RLock lock = redisson.getLock("lock");
+// 2.拿锁且不设置锁超时时间，具备 Watch Dog 自动续期机制
+lock.lock();
+// 3.执行业务
+...
+// 4.释放锁
+lock.unlock();
+```
+
+只有未指定锁超时时间，才会使用到 Watch Dog 自动续期机制。
+
+```java
+// 手动给锁设置过期时间，不具备 Watch Dog 自动续期机制
+lock.lock(10, TimeUnit.SECONDS);
+```
+
+如果使用 Redis 来实现分布式锁的话，还是比较推荐直接基于 Redisson 来做的。
+
+
+
+
+
 #### **Redis 如何解决集群情况下分布式锁的可靠性？**
 
 为了保证集群环境下分布式锁的可靠性，Redis 官方已经设计了一个分布式锁算法 Redlock（红锁）。
@@ -97,6 +154,14 @@ Redlock 算法的基本思路，**是让客户端和多个独立的 Redis 节点
 加锁失败后，客户端向**所有 Redis 节点发起释放锁的操作**，释放锁的操作和在单节点上释放锁的操作一样，只要执行释放锁的 Lua 脚本就可以了。
 
 
+
+**缺点**
+
+Redlock 实现比较复杂，性能比较差，发生时钟变迁的情况下还存在安全性隐患。《数据密集型应用系统设计》一书的作者 Martin Kleppmann 曾经专门发文（[How to do distributed locking - Martin Kleppmann - 2016open in new window](https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html)）怼过 Redlock，他认为这是一个很差的分布式锁实现。感兴趣的朋友可以看看[Redis 锁从面试连环炮聊到神仙打架open in new window](https://mp.weixin.qq.com/s?__biz=Mzg3NjU3NTkwMQ==&mid=2247505097&idx=1&sn=5c03cb769c4458350f4d4a321ad51f5a&source=41#wechat_redirect)这篇文章，有详细介绍到 antirez 和 Martin Kleppmann 关于 Redlock 的激烈辩论。
+
+实际项目中不建议使用 Redlock 算法，成本和收益不成正比。
+
+如果不是非要实现绝对可靠的分布式锁的话，其实单机版 Redis 就完全够了，实现简单，性能也非常高。如果你必须要实现一个绝对可靠的分布式锁的话，可以基于 ZooKeeper 来做，只是性能会差一些。
 
 
 

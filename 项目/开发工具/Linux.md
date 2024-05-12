@@ -1,12 +1,12 @@
-### Linux 常用命令
+### **Linux 常用命令**
 
 #### **常用**
 
 - `sudo + 其他命令`：以系统管理者的身份执行指令，也就是说，经由 sudo 所执行的指令就好像是 root 亲自执行。
 - `grep 要搜索的字符串 要搜索的文件 --color`：搜索命令，--color 代表高亮显示。
 - `kill -9 进程的pid`：杀死进程（-9 表示强制终止）先用 ps 查找进程，然后用 kill 杀掉。
-- `shutdown`：`shutdown -h now`：指定现在立即关机；`shutdown +5 "System will shutdown after 5 minutes"`：指定 5 分钟后关机，同时送出警告信息给登入用户。
-- `reboot`：`reboot`：重开机。`reboot -w`：做个重开机的模拟（只有纪录并不会真的重开机）。
+- `shutdown`：`shutdown -h now`：指定现在立即关机；`shutdown +5 "System will shutdown after 5 minutes"`：指定 5 分钟后关机，同时送出警告信息给登入用户
+- `reboot`：`reboot`：重开机。`reboot -w`：做个重开机的模拟（只有纪录并不会真的重开机）
 
 
 

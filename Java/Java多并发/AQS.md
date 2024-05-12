@@ -64,7 +64,7 @@ protected final boolean compareAndSetState(int expect, int update) {
 
 CLH 锁是对自旋锁的一种改进，有效的解决了以上的两个缺点。首先它将线程组织成一个队列，保证先请求的线程先获得锁，避免了饥饿问题。其次锁状态去中心化，让每个线程在不同的状态变量中自旋，这样当一个线程释放它的锁时，只能使其后续线程的高速缓存失效，缩小了影响范围，从而减少了 CPU 的开销。
 
-CLH 锁数据结构很简单，类似一个链表队列，所有请求获取锁的线程会排列在链表队列中，自旋访问队列中前一个节点的状态。**当一个节点释放锁时，只有它的后一个节点才可以得到锁。**CLH 锁本身有一个队尾指针 Tail，它是一个原子变量，指向队列最末端的 CLH 节点。每一个 CLH 节点有两个属性：所代表的线程和标识是否持有锁的状态变量。当一个线程要获取锁时，它会对 Tail 进行一个 getAndSet 的原子操作。该操作会返回 Tail 当前指向的节点，也就是当前队尾节点，然后使 Tail 指向这个线程对应的 CLH 节点，成为新的队尾节点。入队成功后，该线程会轮询上一个队尾节点的状态变量，当上一个节点释放锁后，它将得到这个锁。
+CLH 锁数据结构很简单，类似一个链表队列，**所有请求获取锁的线程会排列在链表队列中，自旋访问队列中前一个节点的状态。当一个节点释放锁时，只有它的后一个节点才可以得到锁。**CLH 锁本身有一个队尾指针 Tail，它是一个原子变量，指向队列最末端的 CLH 节点。每一个 CLH 节点有两个属性：所代表的线程和标识是否持有锁的状态变量。当一个线程要获取锁时，它会对 Tail 进行一个 getAndSet 的原子操作。该操作会返回 Tail 当前指向的节点，也就是当前队尾节点，然后使 Tail 指向这个线程对应的 CLH 节点，成为新的队尾节点。入队成功后，该线程会轮询上一个队尾节点的状态变量，当上一个节点释放锁后，它将得到这个锁。
 
 
 
@@ -89,7 +89,7 @@ CLH 锁作为自旋锁的改进，有以下几个优点：
 
 **显示的添加了前后指针**
 
-因为 AQS 用阻塞等待替换了自旋操作，线程会阻塞等待锁的释放，不能主动感知到前驱节点状态变化的信息。AQS 中显式的维护前驱节点和后继节点，**需要释放锁的节点会显式通知下一个节点解除阻塞**，如下图所示，T1 释放锁后主动唤醒 T2，使 T2 检测到锁已释放，获取锁成功。
+因为 AQS 用阻塞等待替换了自旋操作，线程会阻塞等待锁的释放，不能主动感知到前驱节点状态变化的信息。AQS 中显式的维护前驱节点和后继节点，**需要释放锁的节点会显式通知下一个节点解除阻塞**，如下图所示，T1 释放锁后主动唤醒 T2，使 T2 检测到锁已释放，获取锁成功
 
 <img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240324222229937.png" alt="image-20240324222229937" style="zoom:50%;" />
 
@@ -107,7 +107,7 @@ AQS 同样提供了该状态变量的原子读写操作，但和同步器状态�
 
 | 状态名    | 枚举值 | 描述                                     |
 | --------- | ------ | ---------------------------------------- |
-| SIGNAL    | -1     | 表示该节点正常等待                       |
+| SIGNAL    | -1     | 表示队列下一个线程在等待其唤醒           |
 | PROPAGATE | -3     | 应将 releaseShared 传播到其他节点        |
 | CONDITION | -2     | 该节点位于条件队列，不能用于同步队列节点 |
 | CANCELLED | 1      | 由于超时、中断或其他原因，该节点被取消   |
@@ -117,69 +117,252 @@ AQS 同样提供了该状态变量的原子读写操作，但和同步器状态�
 
 ### **AQS独占模式分析**
 
-head节点代表当前正在持有锁的节点，如果当前线程所在的节点处于头节点的后一个，那么它将会不断去尝试拿锁，直到获取成功。否则进行判断，是否需要挂起。这样就能保证head之后的一个节点在自旋CAS获取锁，其他线程都已经被挂起或正在被挂起。这样就能最大限度地避免无用的自旋消耗CPU。
+#### **请求锁**
+
+```java
+public final void acquire(int arg) {
+        //先去尝试获取锁,如果没有获取成功，就在CLH队列中增加一个当前线程的节点，表示等待抢占
+        if (!tryAcquire(arg) &&
+            acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+            selfInterrupt();
+    }
+```
+
+**tryAcquire方法**
+
+表示线程尝试获得锁，该方法只有一行实现 throw new UnsupportedOperationException()，意图很明显，AQS规定继承类必须重写tryAcquire方法，否则就直接抛出UnsupportedoperationException。那么为什么这里一定需要上层自己实现？因为尝试获取锁这个操作中可能包含某些业务自定义的逻辑，比如是否“可重入”等。
+
+**如果tryAcquire返回true，说明已经获得锁，直接返回；如果返回false，则执行acquireQueued(addWaiter(Node.EXCLUSIVE), arg)，将线程加入等待队列**
 
 
 
-**请求锁**
+#### **将线程加入队列**
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240324223401016.png" alt="image-20240324223401016" style="zoom: 67%;" />
+假如tryAcquire返回false，说明需要排队，那么就会调用acquireQueued(addWaiter(Node.EXCLUSIVE),arg)，acquireQueued 方法其中嵌套了addWaiter
 
-**将线程加入队列**
+**addWaiter方法**
 
-先来看addWaiter，当线程获取锁失败时，会调用addWaiter方法加入到队列中，并将tail指向该结点，这是一个原子性的操作
+先来看addWaiter，**当线程第一次获取锁失败时，会调用addWaiter方法加入到队列中**，并将tail指向该结点，这是一个原子性的操作
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240324223827728.png" alt="image-20240324223827728" style="zoom: 67%;" />
+```java
+ //AbstractQueuedSynchronizer.addWaiter()
+  private Node addWaiter(Node mode) {
+    // 初始化一个节点，用于保存当前线程
+        Node node = new Node(Thread.currentThread(), mode);
+        // 当CLH队列不为空的视乎，直接在队列尾部插入一个节点
+        Node pred = tail;
+        if (pred != null) {
+            node.prev = pred;
+            //如果pred还是尾部(即没有被其他线程更新)，则将尾部更新为node节点(即当前线程快速设置成了队尾)
+            if (compareAndSetTail(pred, node)) {
+                pred.next = node;
+                return node;
+            }
+        }
+        // 当CLH队列为空的时候，调用enq方法初始化队列
+        enq(node);
+        return node;
+    }
+```
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240324224514923.png" alt="image-20240324224514923" style="zoom: 80%;" />
+**enq方法**
 
-如果队列未初始化(tail== null)，那么就尝试初始化，如果尾插节点失败，那么就不断重试，直到插入成功为止。
+将该node加入到尾节点
 
-**判断能否获取锁**
+```java
+    private Node enq(final Node node) {
+        //在一个循环里不停的尝试将node节点插入到队尾里
+        for (;;) {
+            Node t = tail;
+            if (t == null) { // 初始化节点，头尾都指向一个空节点
+                if (compareAndSetHead(new Node()))
+                    tail = head;
+            } else {
+                node.prev = t;
+                if (compareAndSetTail(t, node)) {
+                    t.next = node;
+                    return t;
+                }
+            }
+        }
+    }
+```
 
-再来看acquireQueued方法
+假设当前线程0占有锁，线程1占有锁失败，此时会创建一个当前线程的结点Node，然后执行enq
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240324224425501.png" alt="image-20240324224425501" style="zoom: 67%;" />
+**如果队列未初始化(tail== null)，那么就尝试初始化，新建一个结点，并将头结点和尾结点指向该结点（该结点不代表任何线程，只是作为头节点去唤醒后继线程结点）**
 
-当前置节点为head，说明当前节点有权限去尝试拿锁，这是一种约定。如果tryAcquire返回true，代表拿到了锁，那么顺理成章，函数返回。**如果tryAcquire为false，由于死循环，会一直执行tryAcquire，也就是会自旋等待，直到拿到锁为止**
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240509181546362.png" alt="image-20240509181546362" style="zoom:50%;" />
 
-若当前节点没有拿锁的权限或拿锁失败，那么将会进入shouldParkAfterFailedAcquire判断是否需要挂起(park)，方法的参数是pred Node和当前Node的引用。**若需要挂起，interrupted将会设置为ture，终止死循环**
+队列初始化后的状态如上图
 
-**判断是否需要挂起**
+此时会继续执行for循环，**然后使用CAS将新的线程的结点插入到队列尾部**
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240324220735021.png" alt="image-20240324220735021" style="zoom:50%;" />
+因为使用的是CAS对为节为如果尾插节点失败，那么就不断重试，直到插入成功为止
 
-若pred的waitSatus为SIGNAL，说明前置节点也在等待拿锁，所以当前线程可以挂起休息，返回true，之后**会调用parkAndCheckInterrupt将该线程挂起**
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240509182055928.png" alt="image-20240509182055928" style="zoom:50%;" />
+
+最后返回插入成功的结点
+
+
+
+
+
+#### **判断能否获取锁**
+
+**acquireQueued方法**
+
+```java
+final boolean acquireQueued(final Node node, int arg) {
+        boolean failed = true;
+        try {
+            boolean interrupted = false;
+            //在一个循环里不断等待前驱节点执行完毕
+            for (;;) {
+                final Node p = node.predecessor();
+                if (p == head && tryAcquire(arg)) {// 通过tryAcquire获得锁，如果获取到锁，说明头节点已经释放了锁
+                    setHead(node);//将当前节点设置成头节点
+                    p.next = null; // help GC//将上一个节点的next变量被设置为null，在下次GC的时候会清理掉
+                    failed = false; //将failed标记设置成false, 表示拿到了锁
+                    return interrupted;
+                }
+                //中断
+                if (shouldParkAfterFailedAcquire(p, node) && // 是否需要阻塞
+                    parkAndCheckInterrupt())// 阻塞，返回线程是否被中断
+                    interrupted = true;
+            }
+        } finally {
+            if (failed)
+                cancelAcquire(node);
+        }
+    }
+```
+
+acquireQueued方法内定义了一个局部变量failed，初始值为true，意思是默认失败。还有个变量interrupted，初始值为false，意思是等待锁的过程中当前线程没有被中断。
+
+当前置节点为head，**说明当前节点有权限去尝试拿锁**，这是一种约定。**如果tryAcquire返回true，代表拿到了锁**，那么顺理成章，函数返回。**如果tryAcquire为false，就要判断是否要将挂起该线程**
+
+当前置节点不是head，即当前节点没有拿锁的权限或拿锁失败，那么将会进入shouldParkAfterFailedAcquire判断是否需要挂起(park)，方法的参数是pred Node和当前Node的引用。**若需要挂起，interrupted将会设置为ture，终止死循环**
+
+当进入阻塞阶段，会进入 **parkAndCheckInterrupt()** 方法，则会调用 **LockSupport.park(this)** 将当前线程挂起
+
+
+
+
+
+#### **判断是否需要挂起**
+
+```java
+/**
+ * 确保当前结点的前驱结点的状态为SIGNAL
+ * SIGNAL意味着线程释放锁后会唤醒后面阻塞的线程
+ * 只有确保能够被唤醒，当前线程才能放心的阻塞。
+ */
+    private static boolean shouldParkAfterFailedAcquire(Node pred, Node node) {
+        int ws = pred.waitStatus;
+        if (ws == Node.SIGNAL)
+           //如果前驱节点状态为SIGNAL
+           //表明当前线程需要阻塞，因为前置节点承诺执行完之后会通知唤醒当前节点
+            return true;
+        if (ws > 0) {//ws > 0 代表前驱节点取消了
+            do {
+                node.prev = pred = pred.prev;//不断的把前驱取消了的节点移除队列
+            } while (pred.waitStatus > 0);
+            pred.next = node;
+        } else {
+         //初始化状态，将前驱节点的状态设置成SIGNAL
+            compareAndSetWaitStatus(pred, ws, Node.SIGNAL);
+        }
+        return false;
+    }
+```
+
+**如果前置结点为0，将前置结点状态置为SIGNAL，表示该线程需要由前置结点唤醒**
+
+当线程1刚加入进来且获取锁失败时，会执行shouldParkAfterFailedAcquire(p, node)方法，因为线程1的前置结点头节点为初始化状态0，**故需要用CAS将其修改为SIGNAL状态**，然后返回false，重试外层逻辑
+
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240509162824092.png" alt="image-20240509162824092" style="zoom:50%;" />
+
+**若pred的waitSatus为SIGNAL**，说明前置结点可以唤醒该线程，所以当前线程可以挂起休息，返回true，之后**会调用parkAndCheckInterrupt将该线程挂起**
+
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240509163115625.png" alt="image-20240509163115625" style="zoom:50%;" />
 
 如果ws大于0，说明pred的waitSatus是CANCEL，所以可以将其从队列中删除。**这里通过从后向前搜索**，将pred指向搜索过程中第一个waitSatus为非CANCEL的节点。相当于链式地删除被CANCEL的节点。然后返回false，代表当前节点不需要挂起，**因为pred指向了新的Node，需要重试外层的逻辑。**
 
-除此之外，pred的ws还有两种可能，0或PROPAGATE，有人可能会问，为什么不可能是CONDITION？因为waitStatus只有在其他条件模式下，才会被修改为CONDITION，这里不会出现，并且只有在共享模式下，才可能出现waitStatus为PROPAGATE，暂时也不用管。
 
-那么在独占模式下，ws在这里只会出现0的情况。0代表pred处于初始化默认状态，所以通过CAS将当前pred的waitStatus修改为SIGNAL，然后返回false，重试外层逻辑。
 
-**释放锁**
+#### **释放锁**
+
+```java
+public final boolean release(int arg) {
+  		//尝试释放锁
+        if (tryRelease(arg)) {
+            Node h = head;  //
+            if (h != null && h.waitStatus != 0)//waitStatus!=0表明处于CANCEL状态或者是SIGNAL。也就是说waitStatus不为0表示它的后继在等待唤醒
+                unparkSuccessor(h);
+               //成功返回true
+            return true;
+        }
+        //否则返回false
+        return false;
+}
+```
+
+如果成功释放了锁，就需要判断头节点的状态是否需要唤醒后续线程
+
+
+
+#### **判断是否唤醒后续线程**
 
 主要是通过unparkSuccessor来唤醒后续线程
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240324230613040.png" alt="image-20240324230613040" style="zoom: 67%;" />
+```java
+private void unparkSuccessor(Node node) {
+        int ws = node.waitStatus;
+         //如果waitStatus < 0, 即为SIGNAL, 将该结点状态置为0
+        if (ws < 0)  compareAndSetWaitStatus(node, ws, 0);
+       //若后续节点为空或已被cancel，则从尾部开始找到队列中第一个waitStatus<=0，即未被cancel的节点
+        Node s = node.next;
+        if (s == null || s.waitStatus > 0) {
+            s = null;
+            for (Node t = tail; t != null && t != node; t = t.prev)
+                if (t.waitStatus <= 0)
+                    s = t;
+        }
+        if (s != null)
+            LockSupport.unpark(s.thread);
+    }
+```
+
+**不需要唤醒后续线程的情况有**
+
+头节点为空，表示不需要唤醒后续线程
+
+头节点状态为0，表示新加入的线程刚加入AQS队列并尝试获取锁
+
+头节点的状态为0，且新加入的线程已经获取到锁
+
+![image-20240509180808110](https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240509180808110.png)
 
 
 
-**唤醒后续线程**
+**需要唤醒的情况**
 
-<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240324230827242.png" alt="image-20240324230827242" style="zoom:50%;" />
+获取head的waitStatus，如果<0，即为SIGNAL，那么将其置为0，表示锁已释放，然后唤醒后续等待线程
 
-获取head的waitStatus，如果不为0，那么将其置为0，表示锁已释放。
+如果后续节点为null或者处于CANCELED状态，那么从后往前搜索，**找到除了head外最靠前且非CANCELED状态的Node，对其进行唤醒，让它起来尝试拿锁**，唤醒的线程会回到acquireQueued(final Node node, int arg)方法的逻辑重新执行**tryAcquire(arg)**
 
-接下来获取后续节点如果后续节点为null或者处于CANCELED状态，那么从后往前搜索，**找到除了head外最靠前且非CANCELED状态的Node，对其进行唤醒，让它起来尝试拿锁。**
-
-
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240509163115625.png" alt="image-20240509163115625" style="zoom:50%;" />
 
 
 
-### **自定义同步器**
 
-**同步器的设计是基于模板方法模式的**，如果需要自定义同步器一般的方式是这样（模板方法模式很经典的一个应用）：
+
+
+
+## **自定义同步器**
+
+**同步器的设计是基于模板方法模式的**：如果需要自定义同步器一般的方式是这样（模板方法模式很经典的一个应用）：
 
 1. 使用者继承 `AbstractQueuedSynchronizer` 并重写指定的方法。
 2. 将 AQS 组合在自定义同步组件的实现中，并调用其模板方法，而这些模板方法会调用使用者重写的方法。
@@ -202,6 +385,224 @@ protected boolean isHeldExclusively()
 ```
 
 **什么是钩子方法呢？** 钩子方法是一种被声明在抽象类中的方法，一般使用 `protected` 关键字修饰，它可以是空方法（由子类实现），也可以是默认实现的方法。模板设计模式通过钩子方法控制固定步骤的实现。
+
+
+
+
+
+### **ReentrantLock**
+
+`ReentrantLock` 实现了 `Lock` 接口，是一个可重入且独占式的锁，和 `synchronized` 关键字类似。不过，`ReentrantLock` 更灵活、更强大，增加了轮询、超时、中断、公平锁和非公平锁等高级功能。
+
+```java
+private volatile int state
+```
+
+**它的内部维护了一个 `state` 变量**，用volatile修饰，保证了其可见性，用来表示锁的占用状态。**`state` 的初始值为 0**，表示锁处于未锁定状态。当线程 A 调用 `lock()` 方法时，会尝试通过 `tryAcquire()` 方法独占该锁，**并让 `state` 的值加 1**。如果成功了，那么线程 A 就获取到了锁。如果失败了，那么线程 A 就会被加入到一个等待队列（CLH 队列）中，直到其他线程释放该锁。
+
+**state涉及到三个方法**
+
+![image-20240509154744601](https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240509154744601.png)
+
+
+
+```java
+public class ReentrantLock implements Lock, java.io.Serializable {}
+```
+
+`ReentrantLock` 里面有一个内部类 `Sync`，**`Sync` 继承 AQS（`AbstractQueuedSynchronizer`），添加锁和释放锁的大部分操作实际上都是在 `Sync` 中实现的。`Sync` 有公平锁 `FairSync` 和非公平锁 `NonfairSync` 两个子类**
+
+<img src="https://palepics.oss-cn-guangzhou.aliyuncs.com/img/image-20240508232856738.png" alt="image-20240508232856738" style="zoom: 67%;" />
+
+`ReentrantLock` 默认使用非公平锁，也可以通过构造器来显式的指定使用公平锁。
+
+```java
+// 传入一个 boolean 值，true 时为公平锁，false 时为非公平锁
+public ReentrantLock(boolean fair) {
+    sync = fair ? new FairSync() : new NonfairSync();
+}
+```
+
+#### **NonfairSync**
+
+**lock()方法**
+
+当我们调用 **ReentrantLock** 的 **lock()** 方法的时候，实际上是调用了 **NonfairSync** 的 **lock()** 方法
+
+```java
+static final class NonfairSync extends Sync {
+        private static final long serialVersionUID = 7316153563782823691L;
+
+        /**
+         * Performs lock.  Try immediate barge, backing up to normal
+         * acquire on failure.
+         */
+        final void lock() {
+         //这个方法先用CAS操作，去尝试抢占该锁
+         // 快速尝试将state从0设置成1，如果state=0代表当前没有任何一个线程获得了锁
+            if (compareAndSetState(0, 1))
+             //state设置成1代表获得锁成功
+             //如果成功，就把当前线程设置在这个锁上，表示抢占成功,在重入锁的时候需要
+                setExclusiveOwnerThread(Thread.currentThread());
+            else
+             //如果失败，则调用 AbstractQueuedSynchronizer.acquire() 模板方法，等待抢占。
+                acquire(1);
+        }
+
+        protected final boolean tryAcquire(int acquires) {
+            return nonfairTryAcquire(acquires);
+        }
+    }
+```
+
+**非公平性：**当程序调用lock的时候，**会先进行一次CAS的尝试，当尝试获取锁失败时，调用acquire**。在acquire内部，首先会调用一次tryAcquire，而nonfairTryAcquire会直接尝试获取锁，如果锁被占用且不可重入，那么就会继续执行AQS中后续的排队流程。虽然只有那么两次尝试抢占，但也体现出了非公平性。
+
+调用 **acquire(1)** 实际上使用的是 **AbstractQueuedSynchronizer** 的 **acquire()** 方法
+
+**acquire()** 会先调用 **tryAcquire()** 这个钩子方法去尝试获取锁，这个方法就是在 NonfairSync.tryAcquire()下的 nonfairTryAcquire()
+
+```java
+//一个尝试插队的过程
+  final boolean nonfairTryAcquire(int acquires) {
+            final Thread current = Thread.currentThread();
+            //获取state值
+            int c = getState();
+            //比较锁的状态是否为 0，如果是0，当前没有任何一个线程获取锁
+            if (c == 0) {
+             //则尝试去原子抢占这个锁（设置状态为1，然后把当前线程设置成独占线程）
+                if (compareAndSetState(0, acquires)) {
+                 // 设置成功标识独占锁
+                    setExclusiveOwnerThread(current);
+                    return true;
+                }
+            }
+            //如果当前锁的状态不是0 state!=0,就去比较当前线程和占用锁的线程是不是一个线程
+            else if (current == getExclusiveOwnerThread()) {
+             //如果是，增加状态变量的值，从这里看出可重入锁之所以可重入，就是同一个线程可以反复使用它占用的锁
+                int nextc = c + acquires;
+                //重入次数太多，大过Integer.MAX
+                if (nextc < 0) // overflow
+                    throw new Error("Maximum lock count exceeded");
+                setState(nextc);
+                return true;
+            }
+            //如果以上两种情况都不通过，则返回失败false
+            return false;
+        }
+```
+
+**可重入性：**一个线程可以不用释放而重复获取一个锁n次，只是在释放的时候也需要相应释放n次。当锁已经被占用，如果占用锁的线程不是当前线程，那么代表获取锁失败，返回false。如果正是自己，满足可重入性的条件，使用nextc这个值来记录重入的次数，因为释放锁的时候也要释放相应次数。
+
+**tryAcquire()** 一旦返回 **false**，就会则进入 **acquireQueued()** 流程，也就是基于CLH队列的抢占模式，在CLH锁队列尾部增加一个等待节点，这个节点保存了当前线程，通过调用 **addWaiter()** 实现，这里需要考虑初始化的情况，在第一个等待节点进入的时候，需要初始化一个头节点然后把当前节点加入到尾部，后续则直接在尾部加入节点
+
+
+
+**unlock()方法**
+
+```java
+public void unlock() {
+        sync.release(1);
+}
+
+public final boolean release(int arg) {
+  //尝试在当前锁的锁定计数（state）值上减1，
+        if (tryRelease(arg)) { //这里tryRelease成功后，自旋线程会马上获取锁，并设置为头
+            Node h = head;
+            if (h != null && h.waitStatus != 0) //waitStatus !=0 表明处于CANCEL状态或者是SIGNAL，表示下一个线程在等待其唤醒。也就是说waitStatus不为零表示它的后继在等待唤醒。
+                unparkSuccessor(h);
+               //成功返回true
+            return true;
+        }
+        //否则返回false
+        return false;
+}
+
+
+protected final boolean tryRelease(int releases) {
+     int c = getState() - releases;
+    //判断是否为当前线程在调用，不是抛出IllegalMonitorStateException异常
+    if (Thread.currentThread() != getExclusiveOwnerThread())
+                throw new IllegalMonitorStateException();
+    boolean free = false;
+    //c == 0,释放该锁，同时将当前所持有线程设置为null
+    if (c == 0) {
+          free = true;
+          setExclusiveOwnerThread(null);
+    }
+    //设置state
+    setState(c);
+    return free;
+ }
+
+
+private void unparkSuccessor(Node node) {
+        int ws = node.waitStatus;
+        if (ws < 0)
+            compareAndSetWaitStatus(node, ws, 0);
+        Node s = node.next;
+        if (s == null || s.waitStatus > 0) {
+            s = null;
+            // 从后往前找到离head最近，而且waitStatus <= 0 的节点
+            // 其实在ReentrantLock中，waitStatus应该只能为0和-1，需要唤醒的都是-1(Node.SIGNAL)
+            for (Node t = tail; t != null && t != node; t = t.prev)
+                if (t.waitStatus <= 0)
+                    s = t;
+        }
+        if (s != null) 
+            LockSupport.unpark(s.thread);// 唤醒挂起线程
+}
+
+```
+
+调用 **unlock()** 方法，其实是直接调用 **AbstractQueuedSynchronizer.release()** 操作。
+
+进入 **release()** 方法，内部先尝试 **tryRelease()** 操作，主要是去除锁的独占线程，然后将状态减一，这里减一主要是考虑到可重入锁可能自身会多次占用锁，只有当状态变成0，才表示完全释放了锁。
+
+如果 **tryRelease** 成功，则将CHL队列的头节点的状态设置为0，然后唤醒下一个非取消的节点线程。
+
+一旦下一个节点的线程被唤醒，被唤醒的线程就会进入**acquireQueued()** 代码流程中，去抢占获取锁
+
+注意：唤醒的线程可以继续执行**acquireQueued()** 去竞争锁，但并不意味着一定能获取锁，依然要和其他
+
+
+
+
+
+#### **FairSync**
+
+FairSync相对来说就简单很多，只有重写的两个方法跟NonfairSync不同
+
+使用lock时并不是直接CAS来判断是否能获取锁，而是直接调用acquire
+
+```java
+final void lock() {
+    acquire(1);
+}
+
+protected final boolean tryAcquire(int acquires) {
+    final Thread current = Thread.currentThread();
+    int c = getState();
+    if (c == 0) {
+        if (!hasQueuedPredecessors() &&// 没有前驱节点了
+            compareAndSetState(0, acquires)) {// 而且没有锁
+            setExclusiveOwnerThread(current);
+            return true;
+        }
+    }
+    else if (current == getExclusiveOwnerThread()) {
+        int nextc = c + acquires;
+        if (nextc < 0)
+            throw new Error("Maximum lock count exceeded");
+        setState(nextc);
+        return true;
+    }
+    return false;
+}
+```
+
+在tryAcquire方法中，首先判断锁是否空闲，**如果空闲，此时并不是直接尝试通过CAS获取锁，而是需要判断是否存在前置等待节点。**如果不存在，那说明，在队列中确实已经轮到当前线程尝试获取锁，然后把该结点设置为队头
+
+否则tryAcquire返回false，当前线程将会执行AQS中的后续等待逻辑。这里就体现出了公平性。
 
 
 
@@ -449,6 +850,10 @@ public class CountDownLatchExample1 {
 }
 
 ```
+
+**有没有可以改进的地方呢？**
+
+可以使用 `CompletableFuture` 类来改进！Java8 的 `CompletableFuture` 提供了很多对多线程友好的方法，使用它可以很方便地为我们编写多线程程序，什么异步、串行、并行或者等待所有线程执行完任务什么的都非常方便。
 
 
 

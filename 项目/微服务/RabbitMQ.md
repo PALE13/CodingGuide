@@ -1,4 +1,4 @@
-## RabbitMQ
+## **RabbitMQ**
 
 ### **RabbitMQ 是什么？**
 

@@ -1,4 +1,4 @@
-## SpringBoot常用注解
+## **SpringBoot常用注解**
 
 
 
@@ -59,11 +59,11 @@ public @interface SpringBootConfiguration {
 
 使用Springboot时，我们需要先引入对应starts，Springboot启动时会自动加载相关依赖，配置相应的初始化参数； 
 
-自动装配的流程：SpringBoot通过@EnableAutoConfiguration注解开启自动配置，**加载spring.factory**中注册的各种AutoConfiguration类，满足@Conditional注解的条件时，就实例化该AutoConfiguration类中定义的Bean，并注入Spring容器，即可完成Springboot的自动装配。
+自动装配的流程：SpringBoot通过@EnableAutoConfiguration注解开启自动配置，**加载spring.factory**中注册的各种AutoConfiguration类，满足@Conditional注解的条件时，就实例化该AutoConfiguration类中定义的Bean，并注入Spring容器，即可完成Springboot的自动装配
 
 比如spring.factories定义的AutoConfiguration类是MyConditionalAutoConfiguration
 
-```
+```java
 # 自定义条件化自动配置
 org.springframework.boot.autoconfigure.condition.ConditionalOnProperty=com.example.MyConditionalAutoConfiguration
 
@@ -75,7 +75,7 @@ org.springframework.boot.autoconfigure.condition.ConditionalOnProperty=com.examp
 
 编写自动配置类 `MyConditionalAutoConfiguration`，并使用 `@Configuration` 注解进行标记，然后在类上添加 `@ConditionalOnProperty` 注解，指定条件。例如：
 
-```
+```java
 javaCopy codeimport org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
@@ -136,7 +136,6 @@ public class AppConfig {
     public TransferService transferService() {
         return new TransferServiceImpl();
     }
-
 }
 ```
 
@@ -229,11 +228,9 @@ public ResponseEntity deleteUser(@PathVariable(value = "userId") Long userId){
 
 ### **前后端传值**
 
-**掌握前后端传值的正确姿势，是你开始 CRUD 的第一步！**
-
 #### **@PathVariable 和 @RequestParam**
 
-`@PathVariable`用于获取路径参数，`@RequestParam`用于获取查询参数。
+`@PathVariable`用于获取路径参数，即路径中的占位符部分，`@RequestParam`用于从请求参数中获取参数值，即 URL 中的查询参数或者表单参数。
 
 举个简单的例子：
 
@@ -249,6 +246,10 @@ public List<Teacher> getKlassRelatedTeachers(
 如果我们请求的 url 是：`/klasses/123456/teachers?type=web`
 
 那么我们服务获取到的数据就是：`klassId=123456,type=web`。
+
+
+
+
 
 #### **@RequestBody**
 
@@ -454,9 +455,9 @@ public class PersonController {
 
 
 
-#### **验证请求参数(Path Variables 和 Request Parameters)**
+#### **验证请求参数@Validated**
 
-一定一定不要忘记在类上加上 `@Validated` 注解了，这个参数可以告诉 Spring 去校验方法参数。
+使用PathVariables 和 RequestParameters一定不要忘记在类上加上 `@Validated` 注解了，这个参数可以告诉 Spring 去校验方法参数。
 
 ```java
 @RestController
@@ -700,358 +701,6 @@ status ：http status
 reason ：response 的消息内容
 
 cause ：抛出的异常
-
-
-
-### **JPA 相关**
-
-#### **创建表**
-
-`@Entity`声明一个类对应一个数据库实体。
-
-`@Table` 设置表名
-
-```java
-@Entity
-@Table(name = "role")
-public class Role {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String name;
-    private String description;
-    省略getter/setter......
-}
-```
-
-
-
-####  **创建主键**
-
-`@Id`：声明一个字段为主键。
-
-使用`@Id`声明之后，我们还需要定义主键的生成策略。我们可以使用 `@GeneratedValue` 指定主键生成策略。
-
-**1.通过 `@GeneratedValue`直接使用 JPA 内置提供的四种主键生成策略来指定主键生成策略。**
-
-```java
-@Id
-@GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long id;
-```
-
-
-
-JPA 使用枚举定义了 4 种常见的主键生成策略，如下：
-
-*Guide：枚举替代常量的一种用法*
-
-```java
-public enum GenerationType {
-
-    /**
-     * 使用一个特定的数据库表格来保存主键
-     * 持久化引擎通过关系数据库的一张特定的表格来生成主键,
-     */
-    TABLE,
-
-    /**
-     *在某些数据库中,不支持主键自增长,比如Oracle、PostgreSQL其提供了一种叫做"序列(sequence)"的机制生成主键
-     */
-    SEQUENCE,
-
-    /**
-     * 主键自增长
-     */
-    IDENTITY,
-
-    /**
-     *把主键生成策略交给持久化引擎(persistence engine),
-     *持久化引擎会根据数据库在以上三种主键生成 策略中选择其中一种
-     */
-    AUTO
-}
-```
-
-
-
-```
-@GeneratedValue`注解默认使用的策略是`GenerationType.AUTO
-```
-
-```java
-public @interface GeneratedValue {
-
-    GenerationType strategy() default AUTO;
-    String generator() default "";
-}
-```
-
-一般使用 MySQL 数据库的话，使用`GenerationType.IDENTITY`策略比较普遍一点（分布式系统的话需要另外考虑使用分布式 ID）。
-
-**通过 `@GenericGenerator`声明一个主键策略，然后 `@GeneratedValue`使用这个策略**
-
-```java
-@Id
-@GeneratedValue(generator = "IdentityIdGenerator")
-@GenericGenerator(name = "IdentityIdGenerator", strategy = "identity")
-private Long id;
-```
-
-等价于：
-
-```java
-@Id
-@GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long id;
-```
-
-jpa 提供的主键生成策略有如下几种：
-
-```java
-public class DefaultIdentifierGeneratorFactory
-    implements MutableIdentifierGeneratorFactory, Serializable, ServiceRegistryAwareService {
-
-  @SuppressWarnings("deprecation")
-  public DefaultIdentifierGeneratorFactory() {
-    register( "uuid2", UUIDGenerator.class );
-    register( "guid", GUIDGenerator.class );      // can be done with UUIDGenerator + strategy
-    register( "uuid", UUIDHexGenerator.class );      // "deprecated" for new use
-    register( "uuid.hex", UUIDHexGenerator.class );   // uuid.hex is deprecated
-    register( "assigned", Assigned.class );
-    register( "identity", IdentityGenerator.class );
-    register( "select", SelectGenerator.class );
-    register( "sequence", SequenceStyleGenerator.class );
-    register( "seqhilo", SequenceHiLoGenerator.class );
-    register( "increment", IncrementGenerator.class );
-    register( "foreign", ForeignGenerator.class );
-    register( "sequence-identity", SequenceIdentityGenerator.class );
-    register( "enhanced-sequence", SequenceStyleGenerator.class );
-    register( "enhanced-table", TableGenerator.class );
-  }
-
-  public void register(String strategy, Class generatorClass) {
-    LOG.debugf( "Registering IdentifierGenerator strategy [%s] -> [%s]", strategy, generatorClass.getName() );
-    final Class previous = generatorStrategyToClassNameMap.put( strategy, generatorClass );
-    if ( previous != null ) {
-      LOG.debugf( "    - overriding [%s]", previous.getName() );
-    }
-  }
-}
-```
-
-
-
-#### **设置字段类型**
-
-`@Column` 声明字段。
-
-**示例：**
-
-设置属性 userName 对应的数据库字段名为 user_name，长度为 32，非空
-
-```java
-@Column(name = "user_name", nullable = false, length=32)
-private String userName;
-```
-
-设置字段类型并且加默认值，这个还是挺常用的。
-
-```java
-@Column(columnDefinition = "tinyint(1) default 1")
-private Boolean enabled;
-```
-
-
-
-#### **指定不持久化特定字段**
-
-`@Transient`：声明不需要与数据库映射的字段，在保存的时候不需要保存进数据库 。
-
-如果我们想让`secrect` 这个字段不被持久化，可以使用 `@Transient`关键字声明。
-
-```java
-@Entity(name="USER")
-public class User {
-
-    ......
-    @Transient
-    private String secrect; // not persistent because of @Transient
-
-}
-```
-
-除了 `@Transient`关键字声明， 还可以采用下面几种方法：
-
-```java
-static String secrect; // not persistent because of static
-final String secrect = "Satish"; // not persistent because of final
-transient String secrect; // not persistent because of transient
-```
-
-一般使用注解的方式比较多
-
-
-
-#### **声明大字段**
-
-`@Lob`:声明某个字段为大字段。
-
-```java
-@Lob
-private String content;
-```
-
-更详细的声明：
-
-```java
-@Lob
-//指定 Lob 类型数据的获取策略， FetchType.EAGER 表示非延迟加载，而 FetchType.LAZY 表示延迟加载 ；
-@Basic(fetch = FetchType.EAGER)
-//columnDefinition 属性指定数据表对应的 Lob 字段类型
-@Column(name = "content", columnDefinition = "LONGTEXT NOT NULL")
-private String content;
-```
-
-
-
-#### **创建枚举类型的字段**
-
-可以使用枚举类型的字段，不过枚举字段要用`@Enumerated`注解修饰。
-
-```java
-public enum Gender {
-    MALE("男性"),
-    FEMALE("女性");
-
-    private String value;
-    Gender(String str){
-        value=str;
-    }
-}
-```
-
-
-
-```java
-@Entity
-@Table(name = "role")
-public class Role {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String name;
-    private String description;
-    @Enumerated(EnumType.STRING)
-    private Gender gender;
-    省略getter/setter......
-}
-```
-
-数据库里面对应存储的是 MALE/FEMALE。
-
-
-
-#### **增加审计功能**
-
-只要继承了 `AbstractAuditBase`的类都会默认加上下面四个字段。
-
-```java
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@MappedSuperclass
-@EntityListeners(value = AuditingEntityListener.class)
-public abstract class AbstractAuditBase {
-
-    @CreatedDate
-    @Column(updatable = false)
-    @JsonIgnore
-    private Instant createdAt;
-
-    @LastModifiedDate
-    @JsonIgnore
-    private Instant updatedAt;
-
-    @CreatedBy
-    @Column(updatable = false)
-    @JsonIgnore
-    private String createdBy;
-
-    @LastModifiedBy
-    @JsonIgnore
-    private String updatedBy;
-}
-```
-
-我们对应的审计功能对应地配置类可能是下面这样的（Spring Security 项目）:
-
-```java
-@Configuration
-@EnableJpaAuditing
-public class AuditSecurityConfiguration {
-    @Bean
-    AuditorAware<String> auditorAware() {
-        return () -> Optional.ofNullable(SecurityContextHolder.getContext())
-                .map(SecurityContext::getAuthentication)
-                .filter(Authentication::isAuthenticated)
-                .map(Authentication::getName);
-    }
-}
-```
-
-简单介绍一下上面涉及到的一些注解：
-
-1. `@CreatedDate`: 表示该字段为创建时间字段，在这个实体被 insert 的时候，会设置值
-
-2. `@CreatedBy` :表示该字段为创建人，在这个实体被 insert 的时候，会设置值
-
-   `@LastModifiedDate`、`@LastModifiedBy`同理。
-
-`@EnableJpaAuditing`：开启 JPA 审计功能。
-
-#### **删除/修改数据**
-
-`@Modifying` 注解提示 JPA 该操作是修改操作，注意还要配合`@Transactional`注解使用。
-
-```java
-@Repository
-public interface UserRepository extends JpaRepository<User, Integer> {
-
-    @Modifying
-    @Transactional(rollbackFor = Exception.class)
-    void deleteByUserName(String userName);
-}
-```
-
-#### **关联关系**
-
-- `@OneToOne` 声明一对一关系
-- `@OneToMany` 声明一对多关系
-- `@ManyToOne` 声明多对一关系
-- `@ManyToMany` 声明多对多关
-
-
-
-
-
-### **事务 @Transactional**
-
-在要开启事务的方法上使用`@Transactional`注解即可!
-
-```java
-@Transactional(rollbackFor = Exception.class)
-public void save() {
-  ......
-}
-```
-
-我们知道 Exception 分为运行时异常 RuntimeException 和非运行时异常。在`@Transactional`注解中如果不配置`rollbackFor`属性,那么事务只会在遇到`RuntimeException`的时候才会回滚,加上`rollbackFor=Exception.class`,可以让事务在遇到非运行时异常时也回滚。
-
-`@Transactional` 注解一般可以作用在`类`或者`方法`上。
-
-- **作用于类**：当把`@Transactional` 注解放在类上时，表示所有该类的 public 方法都配置相同的事务属性信息。
-- **作用于方法**：当类配置了`@Transactional`，方法也配置了`@Transactional`，方法的事务会覆盖类的事务配置信息。
 
 
 

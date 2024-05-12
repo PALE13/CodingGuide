@@ -1,11 +1,33 @@
-## Spring事务
+## **Spring事务**
 
 
 
-### Spring 管理事务的方式有几种？
+### **Spring 管理事务的方式有几种？**
 
 - **编程式事务**：在代码中硬编码(在分布式系统中推荐使用) : 通过 `TransactionTemplate`或者 `TransactionManager` 手动管理事务，事务范围过大会出现事务未提交导致超时，**因此事务要比锁的粒度更小。**
 - **声明式事务**：在 XML 配置文件中配置或者直接基于注解（单体应用或者简单业务系统推荐使用） : 实际是通过 AOP 实现**（基于`@Transactional` 的全注解方式使用最多）**
+
+
+
+### **如何使用`@Transactional`**
+
+在要开启事务的方法上使用`@Transactional`注解即可
+
+```java
+@Transactional(rollbackFor = Exception.class)
+public void save() {
+  ......
+}
+```
+
+我们知道 Exception 分为运行时异常 RuntimeException 和非运行时异常。在`@Transactional`注解中如果不配置`rollbackFor`属性,那么事务只会在遇到`RuntimeException`的时候才会回滚,加上`rollbackFor=Exception.class`,可以让事务在遇到非运行时异常时也回滚。
+
+`@Transactional` 注解一般可以作用在`类`或者`方法`上。
+
+- **作用于类**：当把`@Transactional` 注解放在类上时，表示所有该类的 public 方法都配置相同的事务属性信息。
+- **作用于方法**：当类配置了`@Transactional`，方法也配置了`@Transactional`，方法的事务会覆盖类的事务配置信息。
+
+*
 
 
 
